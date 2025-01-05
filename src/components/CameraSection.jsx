@@ -90,7 +90,25 @@ const handleExitObservationSubmit = async (observation) => {
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Obtener dispositivos de medios disponibles (cámaras)
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === "videoinput");
+  
+      // Intentar usar la cámara trasera primero, si está disponible
+      let backCamera = videoDevices.find(device => device.label.toLowerCase().includes("back"));
+  
+      // Si no hay cámara trasera, usar la cámara frontal
+      const camera = backCamera || videoDevices.find(device => device.kind === "videoinput");
+  
+      if (!camera) {
+        throw new Error("No hay cámaras disponibles.");
+      }
+  
+      // Usar el dispositivo seleccionado para obtener la transmisión de la cámara
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: camera.deviceId }
+      });
+  
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.onloadedmetadata = () => {
@@ -103,6 +121,7 @@ const handleExitObservationSubmit = async (observation) => {
       setError("No se pudo acceder a la cámara. Verifica los permisos.");
     }
   };
+  
 
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
