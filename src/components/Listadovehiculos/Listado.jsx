@@ -5,14 +5,13 @@ function Listado() {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [time, setTime] = useState(new Date().toLocaleString()); // Reloj en formato de fecha y hora
+  const [time, setTime] = useState(new Date().toLocaleString());
 
-  // Cargar los registros iniciales
   useEffect(() => {
     const fetchRegistros = async () => {
       try {
         const response = await axios.get(
-          "https://CamiMujica.pythonanywhere.com/todos_registros" // Tu nueva ruta de la API
+          "https://CamiMujica.pythonanywhere.com/todos_registros"
         );
         const registros = response.data.registros || [];
         setRecords(registros);
@@ -25,12 +24,10 @@ function Listado() {
 
     fetchRegistros();
 
-    // Actualizar el reloj cada segundo
     const intervalId = setInterval(() => {
       setTime(new Date().toLocaleString());
     }, 1000);
 
-    // Limpiar el intervalo al desmontar el componente
     return () => clearInterval(intervalId);
   }, []);
 
@@ -43,68 +40,92 @@ function Listado() {
   }
 
   return (
-    <div className="bg-white shadow-xl rounded-lg p-6 mx-auto max-w-full md:max-w-7xl overflow-hidden">
-      {/* Título y Reloj */}
+    <div className="bg-white shadow-xl rounded-lg p-6 mx-auto max-w-full md:max-w-7xl">
+      {/* Encabezado */}
       <div className="flex justify-between items-center mb-8">
-        <h2 className="text-3xl font-bold text-blue-800 leading-tight">Listado de Entrada y Salida de Vehículos</h2>
-        <div className="text-xl font-semibold text-gray-500">{time}</div>
+        <h2 className="text-3xl font-bold text-blue-800 leading-tight flex items-center">
+          <i className="fas fa-list-alt mr-3 text-blue-600"></i>
+          Listado de Entrada y Salida de Vehículos
+        </h2>
+        <div className="text-xl font-semibold text-gray-500 flex items-center">
+          <i className="fas fa-clock mr-2 text-green-600"></i>
+          {time}
+        </div>
       </div>
 
-      {/* Tabla */}
-      <div className="overflow-x-auto bg-white rounded-lg shadow-md">
-        <table className="min-w-full text-sm text-gray-700">
-          <thead className="bg-blue-100 text-blue-800">
-            <tr>
-              <th className="text-left py-3 px-6 border-b">Placa</th>
-              <th className="text-left py-3 px-6 border-b">Estado</th>
-              <th className="text-left py-3 px-6 border-b">Fecha Entrada</th>
-              <th className="text-left py-3 px-6 border-b">Hora Entrada</th>
-              <th className="text-left py-3 px-6 border-b">Fecha Salida</th>
-              <th className="text-left py-3 px-6 border-b">Hora Salida</th>
-              <th className="text-left py-3 px-6 border-b">Observación</th>
-            </tr>
-          </thead>
-          <tbody>
-            {records.length > 0 ? (
-              records.map((record, index) => (
-                <tr
-                  key={index}
-                  className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-blue-50 transition-colors duration-300`}
+      {/* Listado de Registros */}
+      <div className="space-y-6">
+        {records.length > 0 ? (
+          records.map((record, index) => (
+            <div
+              key={index}
+              className="bg-blue-50 p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <i className="fas fa-car-side text-blue-500 text-xl mr-2"></i>
+                  <span className="text-lg font-bold text-blue-800">{record.numero_placa}</span>
+                </div>
+                <div
+                  className={`inline-block px-3 py-1 rounded-md text-xs font-medium ${
+                    record.estado === "Entrada"
+                      ? "bg-green-200 text-green-800"
+                      : "bg-orange-200 text-orange-800"
+                  }`}
                 >
-                  <td className="py-3 px-6 border-b">{record.numero_placa}</td>
-                  <td className="py-3 px-6 border-b">
-                    <span
-                      className={`inline-block px-3 py-1 rounded-md text-xs font-medium ${
-                        record.estado === "Entrada"
-                          ? "bg-green-200 text-green-800"
-                          : "bg-orange-200 text-orange-800"
-                      }`}
-                    >
-                      {record.estado}
-                    </span>
-                  </td>
-                  <td className="py-3 px-6 border-b">{record.fecha_entrada}</td>
-                  <td className="py-3 px-6 border-b">{record.hora_entrada}</td>
-                  <td className="py-3 px-6 border-b">
+                  <i
+                    className={`mr-1 ${
+                      record.estado === "Entrada"
+                        ? "fas fa-arrow-circle-down"
+                        : "fas fa-arrow-circle-up"
+                    }`}
+                  ></i>
+                  {record.estado}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
+                <div className="flex items-center">
+                  <i className="fas fa-calendar-day text-blue-500 mr-2"></i>
+                  <span>
+                    <strong>Fecha Entrada:</strong> {record.fecha_entrada}
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <i className="fas fa-clock text-green-500 mr-2"></i>
+                  <span>
+                    <strong>Hora Entrada:</strong> {record.hora_entrada}
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <i className="fas fa-calendar-check text-blue-500 mr-2"></i>
+                  <span>
+                    <strong>Fecha Salida:</strong>{" "}
                     {record.fecha_salida ? record.fecha_salida : "No registrada"}
-                  </td>
-                  <td className="py-3 px-6 border-b">
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <i className="fas fa-clock text-green-500 mr-2"></i>
+                  <span>
+                    <strong>Hora Salida:</strong>{" "}
                     {record.hora_salida ? record.hora_salida : "No registrada"}
-                  </td>
-                  <td className="py-3 px-6 border-b">
+                  </span>
+                </div>
+                <div className="col-span-2 flex items-center">
+                  <i className="fas fa-comment-alt text-gray-500 mr-2"></i>
+                  <span>
+                    <strong>Observación:</strong>{" "}
                     {record.observacion || "Sin observación"}
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="7" className="text-center py-4 border-b">
-                  No hay registros disponibles.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="text-center text-gray-500 py-4">
+            No hay registros disponibles.
+          </div>
+        )}
       </div>
     </div>
   );

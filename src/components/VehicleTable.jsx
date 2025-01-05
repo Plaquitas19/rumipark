@@ -11,7 +11,6 @@ function VehicleTable() {
   useEffect(() => {
     const socket = io("http://localhost:5000");
 
-    // Escuchar actualizaciones
     socket.on("actualizar_registros", (nuevoRegistro) => {
       setVehicles((prevVehicles) => {
         const updatedVehicles = [...prevVehicles];
@@ -26,7 +25,7 @@ function VehicleTable() {
             ...nuevoRegistro,
           };
         } else {
-          updatedVehicles.push({
+          updatedVehicles.unshift({
             plate: nuevoRegistro.numero_placa,
             status:
               nuevoRegistro.fecha_salida === null ||
@@ -44,7 +43,7 @@ function VehicleTable() {
           });
         }
 
-        return updatedVehicles;
+        return updatedVehicles.slice(0, 100); // Limitar a 100 registros recientes
       });
     });
 
@@ -100,10 +99,18 @@ function VehicleTable() {
       <table className="table-auto w-full text-sm text-gray-700">
         <thead>
           <tr className="bg-blue-50 text-blue-800">
-            <th className="text-left py-2 px-4 border-b">Placa</th>
-            <th className="text-left py-2 px-4 border-b">Estado</th>
-            <th className="text-left py-2 px-4 border-b">Fecha</th>
-            <th className="text-left py-2 px-4 border-b">Hora</th>
+            <th className="text-left py-2 px-4 border-b">
+              <i className="fas fa-car-side mr-2"></i>Placa
+            </th>
+            <th className="text-left py-2 px-4 border-b">
+              <i className="fas fa-info-circle mr-2"></i>Estado
+            </th>
+            <th className="text-left py-2 px-4 border-b">
+              <i className="fas fa-calendar-day mr-2"></i>Fecha
+            </th>
+            <th className="text-left py-2 px-4 border-b">
+              <i className="fas fa-clock mr-2"></i>Hora
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -111,22 +118,40 @@ function VehicleTable() {
             vehicles.map((vehicle, index) => (
               <tr
                 key={index}
-                className={`${index % 2 === 0 ? "bg-white" : "bg-blue-50"} hover:bg-blue-200 transition-colors duration-300`}
+                className={`${
+                  index % 2 === 0 ? "bg-white" : "bg-blue-50"
+                } hover:bg-blue-200 transition-colors duration-300`}
               >
-                <td className="py-2 px-4 border-b">{vehicle.plate}</td>
+                <td className="py-2 px-4 border-b flex items-center">
+                  <i className="fas fa-car text-blue-500 mr-2"></i>
+                  {vehicle.plate}
+                </td>
                 <td className="py-2 px-4 border-b">
                   <span
-                    className={`inline-block px-3 py-1 rounded-md text-xs font-medium ${
+                    className={`inline-block px-3 py-1 rounded-md text-xs font-medium flex items-center ${
                       vehicle.status === "Entrada"
                         ? "bg-green-200 text-green-800"
                         : "bg-orange-200 text-orange-800"
                     }`}
                   >
+                    <i
+                      className={`mr-1 ${
+                        vehicle.status === "Entrada"
+                          ? "fas fa-arrow-circle-down"
+                          : "fas fa-arrow-circle-up"
+                      }`}
+                    ></i>
                     {vehicle.status}
                   </span>
                 </td>
-                <td className="py-2 px-4 border-b">{vehicle.date}</td>
-                <td className="py-2 px-4 border-b">{vehicle.time}</td>
+                <td className="py-2 px-4 border-b flex items-center">
+                  <i className="fas fa-calendar-alt text-blue-500 mr-2"></i>
+                  {vehicle.date}
+                </td>
+                <td className="py-2 px-4 border-b flex items-center">
+                  <i className="fas fa-clock text-green-500 mr-2"></i>
+                  {vehicle.time}
+                </td>
               </tr>
             ))
           ) : (

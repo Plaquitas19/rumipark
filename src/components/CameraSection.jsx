@@ -1,5 +1,8 @@
-import React, { useRef, useState } from "react";
+import React, { useState, useRef } from "react";
 import NewVehicleModal from "./NewVehicleModal";
+import "@fortawesome/fontawesome-free/css/all.css"; // Si usas FontAwesome
+import toastr from "toastr";
+import "toastr/build/toastr.min.css";
 
 // Asegúrate de haber instalado y agregado Font Awesome
 import '@fortawesome/fontawesome-free/css/all.css';
@@ -17,7 +20,47 @@ const CameraSection = () => {
   const [isPlateRegistered, setIsPlateRegistered] = useState(null);
   const [vehicleDetails, setVehicleDetails] = useState(null);
   const [exitObservation, setExitObservation] = useState("");
-  
+  const [isExitObservationModalOpen, setIsExitObservationModalOpen] = useState(false);
+  const [isEditingPlate, setIsEditingPlate] = useState(false);
+  const [editablePlate, setEditablePlate] = useState("");
+
+
+
+
+/// Función para manejar el envío de la observación
+const handleExitObservationSubmit = async (observation) => {
+  if (!detectedPlate) {
+    toastr.error("No hay una placa detectada para registrar.");
+    return;
+  }
+
+  try {
+    const response = await fetch("https://CamiMujica.pythonanywhere.com/salida", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        numero_placa: detectedPlate,
+        observacion: observation || "Sin observación",
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      toastr.success(data.message || "Salida registrada exitosamente.");
+      setExitObservation(""); // Limpia el campo de observación tras éxito
+    } else {
+      toastr.error(data.message || "No se puede registrar la salida.");
+    }
+  } catch (err) {
+    console.error("Error al registrar la salida:", err);
+    toastr.error("Error al registrar la salida. Por favor, inténtalo nuevamente.");
+  }
+
+  setIsExitObservationModalOpen(false); // Cierra el modal después de registrar
+};
 
 
 
@@ -137,19 +180,19 @@ const CameraSection = () => {
 
   const registerEntry = async () => {
     if (!detectedPlate) {
-        alert("No hay una placa detectada para registrar.");
+        toastr.error("No hay una placa detectada para registrar.");
         return;
     }
 
     // Verificar si la placa está registrada
     if (isPlateRegistered === false) {
-        alert("La placa no está registrada. No puedes registrar la entrada.");
+        toastr.error("La placa no está registrada. No puedes registrar la entrada.");
         return;
     }
 
     try {
         // Llamar al nuevo endpoint de la API que maneja ambos procesos de verificación y registro
-        const response = await fetch("https://CamiMujica.pythonanywhere.com/entrada", { 
+        const response = await fetch("https://CamiMujica.pythonanywhere.com/entrada", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -161,60 +204,18 @@ const CameraSection = () => {
 
         if (response.ok) {
             if (data.entrada_registrada) {
-                alert("El vehículo ya tiene una entrada registrada. Por favor, registre la salida.");
+                toastr.info("El vehículo ya tiene una entrada registrada. Por favor, registre la salida.");
             } else {
-                alert(data.message || "Entrada registrada exitosamente.");
+                toastr.success(data.message || "Entrada registrada exitosamente.");
             }
         } else {
-            alert(data.message || "Error al registrar la entrada.");
+            toastr.error(data.message || "Error al registrar la entrada.");
         }
     } catch (err) {
         console.error("Error al registrar la entrada:", err);
-        alert("Error al registrar la entrada.");
+        toastr.error("Error al registrar la entrada. Por favor, intenta nuevamente.");
     }
 };
-
-
-  
-
-const registerExit = async () => {
-  if (!detectedPlate) {
-    alert("No hay una placa detectada para registrar.");
-    return;
-  }
-
-  try {
-    // Verificar si la placa detectada es válida
-    const response = await fetch("https://CamiMujica.pythonanywhere.com/salida", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ 
-        numero_placa: detectedPlate, 
-        observacion: exitObservation || "Sin observación" // Incluye la observación o un valor predeterminado
-      }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      alert(data.message || "Salida registrada exitosamente.");
-      setExitObservation(""); // Limpia el campo de observación tras éxito
-    } else {
-      alert(data.message || "No se puede registrar la salida. " + (data.error || ""));
-    }
-  } catch (err) {
-    console.error("Error al registrar la salida:", err);
-    alert("Error al registrar la salida.");
-  }
-};
-
-  
-
-  
-  
-  
   
 
   return (
@@ -249,7 +250,7 @@ const registerExit = async () => {
             </button>
             <button
               className="px-6 py-3 bg-green-700 text-white rounded-lg hover:bg-green-800"
-              onClick={registerExit}
+              onClick={() => setIsExitObservationModalOpen(true)} // Abre el modal
             >
               <i className="fas fa-sign-out-alt mr-2"></i>Registrar Salida
             </button>
@@ -299,34 +300,168 @@ const registerExit = async () => {
                   alt="Placa detectada"
                   className="w-48 h-auto border-4 border-gray-300 rounded-xl shadow-md mt-4"
                 />
-                <p className="mt-2 font-bold text-lg">{detectedPlate}</p>
+
+
+
+                
+                <div className="flex items-center justify-center gap-4 mt-4">
+              {isEditingPlate ? (
+                // Modo de edición: Campo de entrada y botón de guardar
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={editablePlate}
+                    onChange={(e) => setEditablePlate(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:ring focus:ring-blue-500"
+                  />
+
+
+
+
+
+                  <button
+  onClick={async () => {
+    setDetectedPlate(editablePlate); // Guarda los cambios en la placa
+    setIsEditingPlate(false); // Cambia al modo de solo lectura
+
+    try {
+      // Verificar si la placa está registrada llamando a la API
+      const response = await fetch(`https://CamiMujica.pythonanywhere.com/vehiculo/${editablePlate}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          toastr.error("La placa corregida no está registrada. Por favor, regístrala primero.");
+          setIsPlateRegistered(false);
+          return;
+        } else {
+          toastr.error("Error al verificar el estado de la placa.");
+          return;
+        }
+      }
+
+      // La placa está registrada, actualizar estado y datos
+      const data = await response.json();
+      setVehicleDetails(data); // Actualiza los detalles del vehículo
+      setIsPlateRegistered(true); // Marca la placa como registrada
+
+      // Notificación de éxito
+      toastr.success("Placa corregida y verificada. Ahora puedes registrar la entrada manualmente.");
+    } catch (err) {
+      console.error("Error al procesar la placa editada:", err);
+
+      // Notificación de error
+      toastr.error("Hubo un problema al procesar la placa editada. Por favor, inténtalo más tarde.");
+    }
+  }}
+  className="px-2 py-1 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all"
+>
+  <i className="fas fa-check"></i>
+</button>
+
+
+
+
+
+                </div>
+              ) : (
+                // Modo de solo lectura: Texto y botón de editar
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold">{detectedPlate}</span>
+                  <button
+                    onClick={() => {
+                      setEditablePlate(detectedPlate); // Copia el valor actual
+                      setIsEditingPlate(true); // Cambia al modo de edición
+                    }}
+                    className="px-2 py-1 bg-gray-300 text-gray-600 rounded-full hover:bg-gray-400 transition-all"
+                  >
+                    <i className="fas fa-edit"></i>
+                  </button>
+                </div>
+              )}
+            </div>
 
                 {/* Detalles del vehículo */}
-                {vehicleDetails && (
-                  <div className="mt-6 bg-white p-6 rounded-lg shadow-lg border-2 border-gray-200 space-y-4">
-                    <h3 className="text-xl font-semibold text-gray-700">Detalles del Vehículo</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <p className="font-bold text-blue-800">Tipo de Vehículo:</p>
-                        <p className="bg-blue-100 text-blue-800 font-semibold rounded-md px-4 py-2">{vehicleDetails.tipo_vehiculo}</p>
-                      </div>
-                      <div className="flex justify-between">
-                        <p className="font-bold text-blue-800">Propietario:</p>
-                        <p className="bg-blue-100 text-blue-800 font-semibold rounded-md px-4 py-2">{vehicleDetails.propietario}</p>
-                      </div>
-                      <div className="flex justify-between">
-                        <p className="font-bold text-blue-800">DNI:</p>
-                        <p className="bg-blue-100 text-blue-800 font-semibold rounded-md px-4 py-2">{vehicleDetails.dni}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+{vehicleDetails && (
+  <div className="mt-6 bg-white p-6 rounded-xl shadow-lg border border-gray-300 space-y-6">
+    <h3 className="text-2xl font-bold text-gray-800 text-center flex items-center justify-center gap-2">
+      <i className="fas fa-car text-blue-600"></i> Detalles del Vehículo
+    </h3>
+    <div className="space-y-4">
+      {/* Tipo de Vehículo */}
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+          <i className="fas fa-car-side text-lg"></i>
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-bold text-gray-600">Tipo de Vehículo</p>
+          <p className="text-lg font-semibold text-blue-800">{vehicleDetails.tipo_vehiculo}</p>
+        </div>
+      </div>
+
+      {/* Propietario */}
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+          <i className="fas fa-user text-lg"></i>
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-bold text-gray-600">Propietario</p>
+          <p className="text-lg font-semibold text-green-800">{vehicleDetails.propietario}</p>
+        </div>
+      </div>
+
+      {/* DNI */}
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center">
+          <i className="fas fa-id-card text-lg"></i>
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-bold text-gray-600">DNI</p>
+          <p className="text-lg font-semibold text-yellow-800">{vehicleDetails.dni}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
               </div>
             )}
             {error && <p className="text-red-500 mt-2">{error}</p>}
           </div>
 
+          {isExitObservationModalOpen && (
+  <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+    <div className="bg-white rounded-xl p-8 w-full max-w-lg shadow-2xl transform transition-all scale-100">
+      {/* Título del Modal */}
+      <h3 className="text-2xl font-bold text-gray-700 mb-6 text-center">
+        📝 Agregar Observación
+      </h3>
 
+      {/* Área de Texto para la Observación */}
+      <textarea
+        className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none"
+        rows="5"
+        value={exitObservation}
+        onChange={(e) => setExitObservation(e.target.value)}
+        placeholder="Escribe aquí tu observación..."
+      ></textarea>
+
+      {/* Botones */}
+      <div className="flex justify-between items-center mt-6">
+        <button
+          className="px-6 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all"
+          onClick={() => setIsExitObservationModalOpen(false)} // Cierra el modal
+        >
+          Cancelar
+        </button>
+        <button
+          className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-all"
+          onClick={() => handleExitObservationSubmit(exitObservation)} // Envía la observación
+        >
+          Registrar
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
           </div>
         </div>
@@ -337,6 +472,10 @@ const registerExit = async () => {
         onClose={() => setIsNewVehicleModalOpen(false)}
         onSuccess={() => console.log("Nuevo vehículo registrado con éxito")}
       />
+
+      
+
+
     </div>
   );
 };
