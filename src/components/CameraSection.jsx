@@ -51,6 +51,9 @@ const handleExitObservationSubmit = async (observation) => {
     if (response.ok) {
       toastr.success(data.message || "Salida registrada exitosamente.");
       setExitObservation(""); // Limpia el campo de observación tras éxito
+
+      // Recargar la página después de registrar la salida
+      window.location.reload(); // Esto recargará toda la página y obtendrá los datos actualizados
     } else {
       toastr.error(data.message || "No se puede registrar la salida.");
     }
@@ -61,6 +64,7 @@ const handleExitObservationSubmit = async (observation) => {
 
   setIsExitObservationModalOpen(false); // Cierra el modal después de registrar
 };
+
 
 
 
@@ -207,6 +211,9 @@ const handleExitObservationSubmit = async (observation) => {
                 toastr.info("El vehículo ya tiene una entrada registrada. Por favor, registre la salida.");
             } else {
                 toastr.success(data.message || "Entrada registrada exitosamente.");
+
+                // Aquí recargamos la página después de un registro exitoso
+                window.location.reload(); // Esto recargará toda la página y obtendrá los datos actualizados
             }
         } else {
             toastr.error(data.message || "Error al registrar la entrada.");
@@ -216,6 +223,7 @@ const handleExitObservationSubmit = async (observation) => {
         toastr.error("Error al registrar la entrada. Por favor, intenta nuevamente.");
     }
 };
+
   
 
   return (
