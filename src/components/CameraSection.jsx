@@ -23,6 +23,10 @@ const CameraSection = () => {
   const [isExitObservationModalOpen, setIsExitObservationModalOpen] = useState(false);
   const [isEditingPlate, setIsEditingPlate] = useState(false);
   const [editablePlate, setEditablePlate] = useState("");
+  const [userPlan] = useState(1);  // 1: Plan 1, 2: Plan 2, 3: Plan 3
+  const [uploadedImagesCount, setUploadedImagesCount] = useState(0);
+  
+
 
 
 
@@ -31,6 +35,14 @@ const CameraSection = () => {
 const handleExitObservationSubmit = async (observation) => {
   if (!detectedPlate) {
     toastr.error("No hay una placa detectada para registrar.");
+    return;
+  }
+
+  // Asegurarnos de que el usuario esté autenticado y que el usuario_id esté disponible
+  const usuarioId = localStorage.getItem("id"); // O como obtienes el usuario_id de la autenticación
+
+  if (!usuarioId) {
+    toastr.error("No se ha encontrado el usuario. Por favor, asegúrate de estar autenticado.");
     return;
   }
 
@@ -43,6 +55,7 @@ const handleExitObservationSubmit = async (observation) => {
       body: JSON.stringify({
         numero_placa: detectedPlate,
         observacion: observation || "Sin observación",
+        usuario_id: usuarioId,  // Enviamos el usuario_id con la solicitud
       }),
     });
 
@@ -68,6 +81,7 @@ const handleExitObservationSubmit = async (observation) => {
 
 
 
+
   const dataURLToFile = (dataURL, filename) => {
     const arr = dataURL.split(",");
     const mime = arr[0].match(/:(.*?);/)[1];
@@ -81,12 +95,19 @@ const handleExitObservationSubmit = async (observation) => {
   };
 
   const handleCameraToggle = async () => {
-    if (isCameraActive) {
-      stopCamera();
-    } else {
-      await startCamera();
+    // Plan 1 no permite cámara activa
+    if (userPlan === 1) {
+        toastr.error("No tienes acceso a la cámara en este plan.");
+        return;
     }
-  };
+
+    if (isCameraActive) {
+        stopCamera();
+    } else {
+        await startCamera();
+    }
+};
+
 
   const startCamera = async () => {
     try {
@@ -176,11 +197,18 @@ const handleExitObservationSubmit = async (observation) => {
 
 
   const handleImageUpload = async (event) => {
+    if (userPlan === 1 && uploadedImagesCount >= 30) {
+        toastr.error("Has alcanzado el límite de imágenes en este plan.");
+        return;
+    }
+
     const file = event.target.files[0];
     if (file) {
-      detectPlate(file);
+        // Contabiliza la imagen subida
+        setUploadedImagesCount(uploadedImagesCount + 1);
+        detectPlate(file);
     }
-  };
+};
 
   const detectFromCamera = async () => {
     if (videoRef.current) {
@@ -214,13 +242,24 @@ const handleExitObservationSubmit = async (observation) => {
     }
 
     try {
+        // Obtener el usuario_id del sistema de autenticación
+        const userId = localStorage.getItem("id"); // Asegúrate de haber guardado este valor durante el inicio de sesión
+
+        if (!userId) {
+            toastr.error("No se pudo determinar el usuario autenticado.");
+            return;
+        }
+
         // Llamar al nuevo endpoint de la API que maneja ambos procesos de verificación y registro
         const response = await fetch("https://CamiMujica.pythonanywhere.com/entrada", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ numero_placa: detectedPlate }),
+            body: JSON.stringify({ 
+                numero_placa: detectedPlate,
+                usuario_id: parseInt(userId), // Convertir a entero, si es necesario
+            }),
         });
 
         const data = await response.json();
@@ -231,17 +270,18 @@ const handleExitObservationSubmit = async (observation) => {
             } else {
                 toastr.success(data.message || "Entrada registrada exitosamente.");
 
-                // Aquí recargamos la página después de un registro exitoso
+                // Recargar la página después de un registro exitoso
                 window.location.reload(); // Esto recargará toda la página y obtendrá los datos actualizados
             }
         } else {
-            toastr.error(data.message || "Error al registrar la entrada.");
+            toastr.error(data.error || data.message || "Error al registrar la entrada.");
         }
     } catch (err) {
         console.error("Error al registrar la entrada:", err);
         toastr.error("Error al registrar la entrada. Por favor, intenta nuevamente.");
     }
 };
+
 
   
 
@@ -288,19 +328,23 @@ const handleExitObservationSubmit = async (observation) => {
           <div className="p-4 bg-white rounded-lg shadow-lg">
             <div className="flex flex-col items-center gap-4">
               <div className="flex gap-4 justify-center">
-                <button
-                  onClick={handleCameraToggle}
-                  className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800"
-                >
-                  <i className={`fas ${isCameraActive ? 'fa-camera-slash' : 'fa-camera'} mr-2`}></i>
-                  {isCameraActive ? "Desactivar cámara" : "Activar cámara"}
-                </button>
-                <button
-                  onClick={detectFromCamera}
-                  className="px-6 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800"
-                >
-                  <i className="fas fa-video mr-2"></i>Detectar Placa
-                </button>
+              <button
+    onClick={handleCameraToggle}
+    disabled={userPlan === 1}  // Bloqueo del botón si el plan es 1
+    className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800"
+>
+    <i className={`fas ${isCameraActive ? 'fa-camera-slash' : 'fa-camera'} mr-2`}></i>
+    {isCameraActive ? "Desactivar cámara" : "Activar cámara"}
+</button>
+
+<button
+    onClick={detectFromCamera}
+    disabled={userPlan === 1}  // Bloqueo de la acción para el plan 1
+    className="px-6 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800"
+>
+    <i className="fas fa-video mr-2"></i>Detectar Placa
+</button>
+
                 <label
                   className="px-6 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 cursor-pointer"
                 >

@@ -1,17 +1,33 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 function Listado() {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [time, setTime] = useState(new Date().toLocaleString());
+  const navigate = useNavigate(); // Usamos el hook para redirigir al usuario si no está autenticado
 
   useEffect(() => {
+    // Verificamos si hay un token de autenticación
+    const userId = localStorage.getItem("id"); // Asegúrate de almacenar el ID del usuario cuando se autentique
+
+    if (!userId) {
+      navigate("/"); // Redirige al login si no hay ID
+      return;
+    }
+
     const fetchRegistros = async () => {
       try {
         const response = await axios.get(
-          "https://CamiMujica.pythonanywhere.com/todos_registros"
+          "https://CamiMujica.pythonanywhere.com/todos_registros",
+          {
+            headers: {
+              "Content-Type": "application/json",
+              id: userId, // Enviamos el ID del usuario autenticado en el header
+            },
+          }
         );
         const registros = response.data.registros || [];
         setRecords(registros);
@@ -29,7 +45,7 @@ function Listado() {
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [navigate]);
 
   if (isLoading) {
     return <div className="text-center p-4">Cargando datos...</div>;

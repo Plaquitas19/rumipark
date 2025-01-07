@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { io } from "socket.io-client";
 
@@ -7,57 +7,58 @@ function VehicleTable() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const userId = "2"; // Reemplaza esto con el método correcto para obtener el ID del usuario autenticado.
+
   // Conectar al WebSocket para actualizaciones en tiempo real
-  useEffect(() => {
+  const connectSocket = useCallback(() => {
     const socket = io("http://localhost:5000");
 
     socket.on("actualizar_registros", (nuevoRegistro) => {
       setVehicles((prevVehicles) => {
-        const updatedVehicles = [...prevVehicles];
-        const existingIndex = updatedVehicles.findIndex(
-          (v) => v.plate === nuevoRegistro.numero_placa
+        const updatedVehicles = prevVehicles.filter(
+          (v) => v.plate !== nuevoRegistro.numero_placa
         );
 
-        // Actualizar si ya existe, si no agregar
-        if (existingIndex > -1) {
-          updatedVehicles[existingIndex] = {
-            ...updatedVehicles[existingIndex],
-            ...nuevoRegistro,
-          };
-        } else {
-          updatedVehicles.unshift({
-            plate: nuevoRegistro.numero_placa,
-            status:
-              nuevoRegistro.fecha_salida === null ||
-              nuevoRegistro.hora_salida === null
-                ? "Entrada"
-                : "Salida",
-            date:
-              nuevoRegistro.fecha_salida === null
-                ? nuevoRegistro.fecha_entrada
-                : nuevoRegistro.fecha_salida,
-            time:
-              nuevoRegistro.hora_salida === null
-                ? nuevoRegistro.hora_entrada
-                : nuevoRegistro.hora_salida,
-          });
-        }
+        // Agregar o actualizar registro
+        updatedVehicles.unshift({
+          plate: nuevoRegistro.numero_placa,
+          status:
+            nuevoRegistro.fecha_salida === null ||
+            nuevoRegistro.hora_salida === null
+              ? "Entrada"
+              : "Salida",
+          date:
+            nuevoRegistro.fecha_salida === null
+              ? nuevoRegistro.fecha_entrada
+              : nuevoRegistro.fecha_salida,
+          time:
+            nuevoRegistro.hora_salida === null
+              ? nuevoRegistro.hora_entrada
+              : nuevoRegistro.hora_salida,
+        });
 
-        return updatedVehicles.slice(0, 100); // Limitar a 100 registros recientes
+        return updatedVehicles.slice(0, 100); // Limitar a los 100 registros más recientes
       });
     });
 
-    return () => {
-      socket.disconnect();
-    };
+    return () => socket.disconnect();
   }, []);
+
+  useEffect(() => {
+    connectSocket(); // Conectar al WebSocket solo una vez
+  }, [connectSocket]);
 
   // Cargar los registros iniciales
   useEffect(() => {
     const fetchRegistros = async () => {
       try {
         const response = await axios.get(
-          "https://CamiMujica.pythonanywhere.com/registros"
+          "https://CamiMujica.pythonanywhere.com/registros",
+          {
+            headers: {
+              id: userId, // Asegúrate de que este userId sea el del usuario autenticado
+            },
+          }
         );
         const registros = response.data.registros || [];
         const vehicleData = registros.map((registro) => ({
@@ -84,7 +85,7 @@ function VehicleTable() {
     };
 
     fetchRegistros();
-  }, []);
+  }, [userId]);
 
   if (isLoading) {
     return <div className="text-center p-4">Cargando datos...</div>;

@@ -1,6 +1,9 @@
-// src/components/NewVehicleModal.jsx
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import axios from "axios";
+import { UserContext } from "../components/UserContext";  // Importamos el contexto de usuario
+import toastr from "toastr";  // Librería para mostrar notificaciones
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCar, faIdCard, faPen } from "@fortawesome/free-solid-svg-icons";
 
 const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -10,81 +13,137 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     dni: "",
   });
 
+  const { user } = useContext(UserContext); // Obtenemos al usuario logueado desde el contexto
+
+  // Función que maneja el envío de formulario
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+  
+    const userId = localStorage.getItem("id");
+    if (!userId) {
+      toastr.error("Debes iniciar sesión primero");
+      return;
+    }
+  
+    try {
+      const response = await axios.post("https://CamiMujica.pythonanywhere.com/vehiculos", {
+        numero_placa: formData.numero_placa,
+        tipo_vehiculo: formData.tipo_vehiculo,
+        propietario: formData.propietario,
+        dni: formData.dni,
+      }, {
+        headers: {
+          "Content-Type": "application/json",
+          "id": userId,  // Verifica si aquí se pasa el 'id' correctamente en los headers
+        },
+      });
+  
+      if (response.status === 201) {
+        toastr.success("Vehículo registrado exitosamente");
+        onSuccess();
+        onClose();
+      }
+    } catch (error) {
+      // Agregar más detalle de error
+      const errorResponse = error.response ? error.response.data : null;
+      const errorMessage = errorResponse?.error || error.message || "Error desconocido";
+      console.error("Error detallado al registrar vehículo:", errorResponse);
+      toastr.error(`Hubo un error al registrar el vehículo: ${errorMessage}`);
+    }
+  };
+  
+  
+
+  // Función que maneja el cambio de valor en los campos del formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await axios.post("https://CamiMujica.pythonanywhere.com/vehiculos", formData);
-      if (response.status === 201) {
-        alert("Vehículo registrado exitosamente");
-        onSuccess(); // Callback para actualizar la lista u otra acción
-        onClose();
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Error al registrar el vehículo. Por favor, intente nuevamente.");
-    }
-  };
-
+  // Si el modal no está abierto, retornamos null para no renderizar nada
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-[#6a97c1] text-white rounded-lg shadow-lg w-96 p-8 border-4 border-[#3a6e9f] focus:outline-none focus:ring-4 focus:ring-[#3a6e9f] hover:shadow-lg hover:shadow-[#3a6e9f] transition-all 
-                    shadow-[0px_0px_40px_0px_rgba(58,110,159,0.8)]">
+      <div className="bg-[#6a97c1] text-white rounded-lg shadow-lg w-96 p-8 border-4 border-[#3a6e9f]">
         <h2 className="text-2xl font-semibold text-center mb-6">Registrar Nuevo Vehículo</h2>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium">Número de Placa</label>
+          {/* Campo de Número de Placa */}
+          <div className="relative">
+            <FontAwesomeIcon
+              icon={faPen}
+              className="absolute left-4 top-4"
+              style={{ color: "#1da4cf" }}
+            />
             <input
               type="text"
               name="numero_placa"
               value={formData.numero_placa}
               onChange={handleChange}
-              className="w-full mt-2 p-3 bg-white text-gray-900 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3a6e9f] transition-all"
+              placeholder="Número de Placa"
+              className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
               required
+              style={{ borderColor: "#1da4cf" }}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium">Tipo de Vehículo</label>
+          {/* Campo de Tipo de Vehículo */}
+          <div className="relative">
+            <FontAwesomeIcon
+              icon={faCar}
+              className="absolute left-4 top-4"
+              style={{ color: "#1da4cf" }}
+            />
             <input
               type="text"
               name="tipo_vehiculo"
               value={formData.tipo_vehiculo}
               onChange={handleChange}
-              className="w-full mt-2 p-3 bg-white text-gray-900 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3a6e9f] transition-all"
+              placeholder="Tipo de Vehículo"
+              className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
               required
+              style={{ borderColor: "#1da4cf" }}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium">Propietario</label>
+          {/* Campo de Propietario */}
+          <div className="relative">
+            <FontAwesomeIcon
+              icon={faPen}
+              className="absolute left-4 top-4"
+              style={{ color: "#1da4cf" }}
+            />
             <input
               type="text"
               name="propietario"
               value={formData.propietario}
               onChange={handleChange}
-              className="w-full mt-2 p-3 bg-white text-gray-900 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3a6e9f] transition-all"
+              placeholder="Propietario"
+              className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+              style={{ borderColor: "#1da4cf" }}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium">DNI</label>
+          {/* Campo de DNI del Propietario */}
+          <div className="relative">
+            <FontAwesomeIcon
+              icon={faIdCard}
+              className="absolute left-4 top-4"
+              style={{ color: "#1da4cf" }}
+            />
             <input
               type="text"
               name="dni"
               value={formData.dni}
               onChange={handleChange}
-              className="w-full mt-2 p-3 bg-white text-gray-900 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3a6e9f] transition-all"
+              placeholder="DNI del Propietario"
+              className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
               required
+              style={{ borderColor: "#1da4cf" }}
             />
           </div>
 
+          {/* Botones de acción */}
           <div className="flex justify-end space-x-3">
             <button
               type="button"
@@ -95,7 +154,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
             </button>
             <button
               type="submit"
-              className="px-6 py-3 bg-[#3a6e9f] text-white rounded-lg hover:bg-[#2e5a7d] focus:outline-none focus:ring-4 focus:ring-[#3a6e9f] transition-all"
+              className="px-6 py-3 bg-[#3a6e9f] text-white rounded-lg hover:bg-[#2e5a7d] transition-all"
             >
               Registrar
             </button>
