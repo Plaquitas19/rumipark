@@ -333,22 +333,30 @@ const CameraSection = () => {
 
           <div className="flex flex-col md:flex-row justify-between w-full mt-4 px-4 gap-4">
             <button
-              className="px-6 py-3 bg-purple-700 text-white rounded-lg hover:bg-purple-800 w-full md:w-auto"
+              className="px-6 py-3 bg-purple-700 text-white rounded-lg hover:bg-purple-800 w-full md:w-auto flex items-center justify-center"
               onClick={() => setIsNewVehicleModalOpen(true)}
             >
-              <i className="fas fa-car-side mr-2"></i>Nuevo Registro
+              <i className="fas fa-car-side mr-2"></i>{" "}
+              {/* Icono para Nuevo Registro */}
+              <span>Nuevo Registro</span>
             </button>
+
             <button
-              className="px-6 py-3 bg-blue-700 text-white rounded-lg hover:bg-blue-800 w-full md:w-auto"
+              className="px-6 py-3 bg-blue-700 text-white rounded-lg hover:bg-blue-800 w-full md:w-auto flex items-center justify-center"
               onClick={registerEntry}
             >
-              <i className="fas fa-sign-in-alt mr-2"></i>Registrar Entrada
+              <i className="fas fa-sign-in-alt mr-2"></i>{" "}
+              {/* Icono para Registrar Entrada */}
+              <span>Registrar Entrada</span>
             </button>
+
             <button
-              className="px-6 py-3 bg-green-700 text-white rounded-lg hover:bg-green-800 w-full md:w-auto"
+              className="px-6 py-3 bg-green-700 text-white rounded-lg hover:bg-green-800 w-full md:w-auto flex items-center justify-center"
               onClick={() => setIsExitObservationModalOpen(true)} // Abre el modal
             >
-              <i className="fas fa-sign-out-alt mr-2"></i>Registrar Salida
+              <i className="fas fa-sign-out-alt mr-2"></i>{" "}
+              {/* Icono para Registrar Salida */}
+              <span>Registrar Salida</span>
             </button>
           </div>
         </div>
