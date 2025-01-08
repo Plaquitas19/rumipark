@@ -7,7 +7,7 @@ function VehicleTable() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const userId = "2"; // Reemplaza esto con el método correcto para obtener el ID del usuario autenticado.
+  const userId = localStorage.getItem("id");
 
   // Conectar al WebSocket para actualizaciones en tiempo real
   const connectSocket = useCallback(() => {
