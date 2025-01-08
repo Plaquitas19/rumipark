@@ -79,9 +79,6 @@ const handleExitObservationSubmit = async (observation) => {
 };
 
 
-
-
-
   const dataURLToFile = (dataURL, filename) => {
     const arr = dataURL.split(",");
     const mime = arr[0].match(/:(.*?);/)[1];
@@ -155,44 +152,57 @@ const handleExitObservationSubmit = async (observation) => {
   };
 
   const detectPlate = async (file) => {
+    const userId = localStorage.getItem("id");  // Obtener el id del usuario desde el localStorage
+    
+    if (!userId) {
+        setError("Usuario no autenticado");
+        return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
-  
+    formData.append("id", userId);  // Enviar el id del usuario al backend
+
     try {
-      const response = await fetch("https://CamiMujica.pythonanywhere.com/detectar_y_verificar", {
-        method: "POST",
-        body: formData,
-      });
-  
-      if (!response.ok) {
-        throw new Error("Error al procesar la imagen en el modelo.");
-      }
-  
-      const data = await response.json();
-  
-      if (data.estado === "Placa registrada" || data.estado === "Placa no registrada") {
-        setDetectedPlate(data.placa_detectada);
-        setPlateImage(`data:image/jpeg;base64,${data.placa_imagen}`);
-        setIsPlateRegistered(data.estado === "Placa registrada");
-  
-        // Ahora que tenemos la placa detectada, hacemos la solicitud para obtener los detalles
-        const detailsResponse = await fetch(`https://CamiMujica.pythonanywhere.com/vehiculo/${data.placa_detectada}`);
-        const detailsData = await detailsResponse.json();
-  
-        if (detailsResponse.ok) {
-          setVehicleDetails(detailsData);  // Guardamos los detalles en el estado
-        } else {
-          setVehicleDetails(null);  // En caso de error, limpiamos el estado de detalles
+        console.log("Enviando imagen...");
+        const response = await fetch("https://CamiMujica.pythonanywhere.com/detectar_y_verificar", {
+            method: "POST",
+            body: formData,
+        });
+
+        console.log("Respuesta recibida");
+        if (!response.ok) {
+            throw new Error("Error al procesar la imagen en el modelo.");
         }
-      } else {
-        setError("No se detectaron placas.");
-      }
-  
+
+        const data = await response.json();
+        console.log("Datos de la respuesta: ", data);
+
+        if (data.estado === "Placa registrada" || data.estado === "Placa no registrada") {
+            setDetectedPlate(data.placa_detectada);
+            setPlateImage(`data:image/jpeg;base64,${data.placa_imagen}`);
+            setIsPlateRegistered(data.estado === "Placa registrada");
+
+            // Agregar el 'id' del usuario a la URL para verificar los detalles de la placa solo si la registró el usuario
+            const detailsResponse = await fetch(`https://CamiMujica.pythonanywhere.com/vehiculo/${data.placa_detectada}?id=${userId}`);
+            const detailsData = await detailsResponse.json();
+
+            if (detailsResponse.ok) {
+                setVehicleDetails(detailsData);
+            } else {
+                setVehicleDetails(null);
+            }
+        } else {
+            setError("No se detectaron placas.");
+        }
     } catch (err) {
-      console.error("Error al enviar la imagen:", err);
-      setError("Error al procesar la imagen para detectar la placa.");
+        console.error("Error al enviar la imagen:", err);
+        setError(`Error al procesar la imagen: ${err.message}`);
     }
-  };
+};
+
+
+  
   
 
 

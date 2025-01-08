@@ -3,19 +3,32 @@ import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min";
 
-const detectarYVerificarPlaca = async (blob) => {
+const detectarYVerificarPlaca = async (blob, userId) => {
   try {
     const formData = new FormData();
     formData.append("file", blob, "photo.jpg");
 
+    // Enviar la solicitud a la API, incluyendo el id del usuario
     const response = await fetch(
       "https://CamiMujica.pythonanywhere.com/detectar_y_verificar",
-      { method: "POST", body: formData }
+      {
+        method: "POST",
+        body: formData,
+        headers: {
+          "id": userId,  // Pasa el id del usuario en los headers
+        },
+      }
     );
 
     const data = await response.json();
     if (response.ok) {
-      return data;
+      // Si la respuesta es positiva, devolver los detalles de la placa detectada
+      return {
+        estado: data.estado, 
+        placa_detectada: data.placa_detectada,
+        placa_imagen: data.placa_imagen,
+        vehiculo_id: data.vehiculo_id,  // Devuelves el vehiculo_id si la placa está registrada
+      };
     } else {
       console.error("Error en la API:", data.error);
       return { estado: "Error en la detección de la placa" };
@@ -25,6 +38,7 @@ const detectarYVerificarPlaca = async (blob) => {
     return { estado: "Error al procesar la imagen" };
   }
 };
+
 
 const CameraDetection = () => {
   const videoRef = useRef(null);

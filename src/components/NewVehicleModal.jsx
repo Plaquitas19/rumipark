@@ -1,7 +1,6 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import axios from "axios";
-import { UserContext } from "../components/UserContext";  // Importamos el contexto de usuario
-import toastr from "toastr";  // Librería para mostrar notificaciones
+import toastr from "toastr"; // Para mostrar notificaciones
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCar, faIdCard, faPen } from "@fortawesome/free-solid-svg-icons";
 
@@ -13,54 +12,54 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     dni: "",
   });
 
-  const { user } = useContext(UserContext); // Obtenemos al usuario logueado desde el contexto
-
-  // Función que maneja el envío de formulario
+  // Maneja el envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     const userId = localStorage.getItem("id");
     if (!userId) {
       toastr.error("Debes iniciar sesión primero");
       return;
     }
-  
+
     try {
-      const response = await axios.post("https://CamiMujica.pythonanywhere.com/vehiculos", {
-        numero_placa: formData.numero_placa,
-        tipo_vehiculo: formData.tipo_vehiculo,
-        propietario: formData.propietario,
-        dni: formData.dni,
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-          "id": userId,  // Verifica si aquí se pasa el 'id' correctamente en los headers
+      const response = await axios.post(
+        "https://CamiMujica.pythonanywhere.com/vehiculos",
+        {
+          numero_placa: formData.numero_placa,
+          tipo_vehiculo: formData.tipo_vehiculo,
+          propietario: formData.propietario,
+          dni: formData.dni,
         },
-      });
-  
+        {
+          headers: {
+            "Content-Type": "application/json",
+            id: userId,
+          },
+        }
+      );
+
       if (response.status === 201) {
         toastr.success("Vehículo registrado exitosamente");
-        onSuccess();
-        onClose();
+        onSuccess(); // Notificamos al componente padre
+        onClose(); // Cerramos el modal
       }
     } catch (error) {
-      // Agregar más detalle de error
+      // Manejo de errores detallado
       const errorResponse = error.response ? error.response.data : null;
       const errorMessage = errorResponse?.error || error.message || "Error desconocido";
       console.error("Error detallado al registrar vehículo:", errorResponse);
       toastr.error(`Hubo un error al registrar el vehículo: ${errorMessage}`);
     }
   };
-  
-  
 
-  // Función que maneja el cambio de valor en los campos del formulario
+  // Maneja los cambios en los campos del formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
-  // Si el modal no está abierto, retornamos null para no renderizar nada
+  // Si el modal no está abierto, no se renderiza
   if (!isOpen) return null;
 
   return (
@@ -68,7 +67,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       <div className="bg-[#6a97c1] text-white rounded-lg shadow-lg w-96 p-8 border-4 border-[#3a6e9f]">
         <h2 className="text-2xl font-semibold text-center mb-6">Registrar Nuevo Vehículo</h2>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Campo de Número de Placa */}
+          {/* Número de Placa */}
           <div className="relative">
             <FontAwesomeIcon
               icon={faPen}
@@ -87,7 +86,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
             />
           </div>
 
-          {/* Campo de Tipo de Vehículo */}
+          {/* Tipo de Vehículo */}
           <div className="relative">
             <FontAwesomeIcon
               icon={faCar}
@@ -106,7 +105,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
             />
           </div>
 
-          {/* Campo de Propietario */}
+          {/* Propietario */}
           <div className="relative">
             <FontAwesomeIcon
               icon={faPen}
@@ -120,11 +119,12 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
               onChange={handleChange}
               placeholder="Propietario"
               className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+              required
               style={{ borderColor: "#1da4cf" }}
             />
           </div>
 
-          {/* Campo de DNI del Propietario */}
+          {/* DNI del Propietario */}
           <div className="relative">
             <FontAwesomeIcon
               icon={faIdCard}
@@ -143,7 +143,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
             />
           </div>
 
-          {/* Botones de acción */}
+          {/* Botones */}
           <div className="flex justify-end space-x-3">
             <button
               type="button"
