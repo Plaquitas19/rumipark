@@ -24,8 +24,6 @@ const CameraSection = () => {
     useState(false);
   const [isEditingPlate, setIsEditingPlate] = useState(false);
   const [editablePlate, setEditablePlate] = useState("");
-  const [userPlan] = useState(1); // 1: Plan 1, 2: Plan 2, 3: Plan 3
-  const [uploadedImagesCount, setUploadedImagesCount] = useState(0);
 
   /// Función para manejar el envío de la observación
   const handleExitObservationSubmit = async (observation) => {
@@ -94,12 +92,6 @@ const CameraSection = () => {
   };
 
   const handleCameraToggle = async () => {
-    // Plan 1 no permite cámara activa
-    if (userPlan === 1) {
-      toastr.error("No tienes acceso a la cámara en este plan.");
-      return;
-    }
-
     if (isCameraActive) {
       stopCamera();
     } else {
@@ -216,36 +208,32 @@ const CameraSection = () => {
   };
 
   const handleImageUpload = async (event) => {
-    if (userPlan === 1 && uploadedImagesCount >= 30) {
-      toastr.error("Has alcanzado el límite de imágenes en este plan.");
-      return;
-    }
-
     const file = event.target.files[0];
     if (file) {
-      // Contabiliza la imagen subida
-      setUploadedImagesCount(uploadedImagesCount + 1);
       detectPlate(file);
     }
   };
 
   const detectFromCamera = async () => {
-    if (videoRef.current) {
-      const video = videoRef.current;
-
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      const imageData = canvas.toDataURL("image/jpeg");
-      const file = dataURLToFile(imageData, "captura.jpg");
-
-      detectPlate(file);
+    if (!isCameraActive || !videoRef.current) {
+      toastr.error("Debes activar la cámara para poder detectar la placa.");
+      return;
     }
+
+    const video = videoRef.current;
+
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const imageData = canvas.toDataURL("image/jpeg");
+    const file = dataURLToFile(imageData, "captura.jpg");
+
+    detectPlate(file);
   };
 
   const registerEntry = async () => {
@@ -367,7 +355,6 @@ const CameraSection = () => {
               <div className="flex gap-4 justify-center">
                 <button
                   onClick={handleCameraToggle}
-                  disabled={userPlan === 1} // Bloqueo del botón si el plan es 1
                   className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800"
                 >
                   <i
@@ -380,7 +367,6 @@ const CameraSection = () => {
 
                 <button
                   onClick={detectFromCamera}
-                  disabled={userPlan === 1} // Bloqueo de la acción para el plan 1
                   className="px-6 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800"
                 >
                   <i className="fas fa-video mr-2"></i>Detectar Placa
