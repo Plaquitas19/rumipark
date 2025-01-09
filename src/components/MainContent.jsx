@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { io } from "socket.io-client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom"; // Importar useNavigate
 import VehicleTable from "./VehicleTable";
 import CameraSection from "./CameraSection";
 
@@ -10,7 +10,7 @@ function MainContent() {
   const [saludo, setSaludo] = useState("");
   const [username, setUsername] = useState("");
 
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // Iniciar el hook de navegación
 
   useEffect(() => {
     // Verificar si existe un auth_token en localStorage
@@ -22,48 +22,37 @@ function MainContent() {
     const usuarioUsername = localStorage.getItem("username");
     setUsername(usuarioUsername);
 
-    // Función para obtener la hora actual en Perú y ajustar el saludo
-    const obtenerHoraPeru = () => {
-      const ahora = new Date().toLocaleString("en-US", {
-        timeZone: "America/Lima",
-        hour12: false, // Hora en formato de 24 horas
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-
-      const hora = parseInt(ahora.split(":")[0]);
-      if (hora >= 0 && hora < 12) {
-        setSaludo("Buenos días");
-      } else if (hora >= 12 && hora < 18) {
-        setSaludo("Buenas tardes");
-      } else {
-        setSaludo("Buenas noches");
-      }
+    // Obtener la hora actual en la zona horaria de Perú para el saludo
+    const ahora = new Date();
+    const optionsSaludo = {
+      timeZone: "America/Lima",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false, // Asegurarse de usar el formato de 24 horas
     };
 
-    // Ejecutar la función al cargar
-    obtenerHoraPeru();
-    // Actualizar el saludo cada minuto
-    const saludoInterval = setInterval(obtenerHoraPeru, 60000);
+    // Extraer la hora en formato 24 horas desde la zona horaria de Perú
+    const horaPeru = new Intl.DateTimeFormat("es-PE", optionsSaludo).format(
+      ahora
+    );
+    const hora = parseInt(horaPeru.split(":")[0], 10);
 
-    return () => clearInterval(saludoInterval);
+    // Determinar el saludo según la hora
+    if (hora >= 0 && hora < 12) {
+      setSaludo("Buenos días");
+    } else if (hora >= 12 && hora < 18) {
+      setSaludo("Buenas tardes");
+    } else {
+      setSaludo("Buenas noches");
+    }
   }, [navigate]);
 
   useEffect(() => {
-    // Actualizar la hora y fecha cada segundo
+    // Actualizar la hora y fecha cada segundo, sin tocar la zona horaria para el saludo
     const interval = setInterval(() => {
-      const ahora = new Date().toLocaleString("es-PE", {
-        timeZone: "America/Lima",
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour12: false, // Hora de 24 horas
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-      setCurrentTime(ahora);
+      const now = new Date();
+      const formattedTime = now.toLocaleString(); // Esto utiliza la hora local actual, sin modificaciones de zona
+      setCurrentTime(formattedTime);
     }, 1000);
 
     return () => clearInterval(interval);
@@ -95,9 +84,10 @@ function MainContent() {
           </h2>
           <div className="flex items-center text-lg text-gray-600">
             <i className="fas fa-calendar-alt mr-2 text-blue-600"></i>
-            <span className="mr-4">{currentTime.split(",")[0]}</span>
+            <span className="mr-4">{currentTime.split(",")[0]}</span>{" "}
+            {/* Mostrar la fecha */}
             <i className="fas fa-clock mr-2 text-green-600"></i>
-            <span>{currentTime.split(",")[1]}</span>
+            <span>{currentTime.split(",")[1]}</span> {/* Mostrar la hora */}
           </div>
         </div>
         <CameraSection />
