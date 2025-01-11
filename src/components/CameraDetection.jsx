@@ -1,5 +1,4 @@
 import React, { useRef, useEffect, useState } from "react";
-import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min";
 
@@ -8,26 +7,24 @@ const detectarYVerificarPlaca = async (blob, userId) => {
     const formData = new FormData();
     formData.append("file", blob, "photo.jpg");
 
-    // Enviar la solicitud a la API, incluyendo el id del usuario
     const response = await fetch(
-      "https://CamiMujica.pythonanywhere.com/detectar_y_verificar",
+      "https://CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada",
       {
         method: "POST",
         body: formData,
         headers: {
-          "id": userId,  // Pasa el id del usuario en los headers
+          id: userId, // Pasa el id del usuario en los headers
         },
       }
     );
 
     const data = await response.json();
     if (response.ok) {
-      // Si la respuesta es positiva, devolver los detalles de la placa detectada
       return {
-        estado: data.estado, 
+        estado: data.estado,
         placa_detectada: data.placa_detectada,
         placa_imagen: data.placa_imagen,
-        vehiculo_id: data.vehiculo_id,  // Devuelves el vehiculo_id si la placa está registrada
+        vehiculo_id: data.vehiculo_id,
       };
     } else {
       console.error("Error en la API:", data.error);
@@ -39,19 +36,20 @@ const detectarYVerificarPlaca = async (blob, userId) => {
   }
 };
 
-
 const CameraDetection = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [resultados, setResultados] = useState({});
-  const [modalVisible, setModalVisible] = useState(false); // Controla la visibilidad del modal
+  const [modalVisible, setModalVisible] = useState(false);
   const [mensajePlaca, setMensajePlaca] = useState("");
-  const [colorModal, setColorModal] = useState(""); // Controla el color del mensaje en el modal
+  const [colorModal, setColorModal] = useState("");
 
   useEffect(() => {
     const startCamera = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.onloadedmetadata = () => videoRef.current.play();
@@ -76,27 +74,30 @@ const CameraDetection = () => {
         const dataURL = canvas.toDataURL("image/jpeg");
         const blob = await fetch(dataURL).then((res) => res.blob());
 
-        const data = await detectarYVerificarPlaca(blob);
+        const userId = localStorage.getItem("id");
+        const data = await detectarYVerificarPlaca(blob, userId);
         setResultados(data);
 
         if (data.estado === "Placa registrada") {
-          setMensajePlaca("La placa está registrada.");
-          setColorModal("text-success"); // Verde si la placa está registrada
+          setMensajePlaca(`La placa ${data.placa_detectada} está registrada.`);
+          setColorModal("text-success");
         } else if (data.estado === "Placa no registrada") {
-          setMensajePlaca("La placa no está registrada.");
-          setColorModal("text-danger"); // Rojo si no está registrada
+          setMensajePlaca(
+            `Placa detectada (${data.placa_detectada}), pero no registrada.`
+          );
+          setColorModal("text-danger");
         } else {
           setMensajePlaca("Error al procesar la placa.");
-          setColorModal("text-warning"); // Amarillo si hay errores
+          setColorModal("text-warning");
         }
 
-        setModalVisible(true); // Mostrar modal
+        setModalVisible(true);
       }
     } catch (err) {
       console.error("Error al procesar el cuadro:", err);
       setMensajePlaca("Error al procesar la imagen.");
       setColorModal("text-danger");
-      setModalVisible(true); // Mostrar modal en caso de error
+      setModalVisible(true);
     }
   };
 
@@ -106,7 +107,6 @@ const CameraDetection = () => {
         RUMIPARK - Detección de Placas
       </header>
 
-      {/* Video y Captura */}
       <div className="text-center">
         <video ref={videoRef} className="border rounded mb-4" />
         <canvas ref={canvasRef} className="d-none" width={640} height={480} />
@@ -115,7 +115,6 @@ const CameraDetection = () => {
         </button>
       </div>
 
-      {/* Modal Bootstrap */}
       <div
         className={`modal fade ${modalVisible ? "show d-block" : ""}`}
         style={modalVisible ? { display: "block" } : { display: "none" }}

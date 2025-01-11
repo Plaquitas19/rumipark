@@ -153,7 +153,7 @@ const CameraSection = () => {
     const userId = localStorage.getItem("id"); // Obtener el id del usuario desde el localStorage
 
     if (!userId) {
-      setError("Usuario no autenticado");
+      toastr.error("Usuario no autenticado");
       return;
     }
 
@@ -162,48 +162,62 @@ const CameraSection = () => {
     formData.append("id", userId); // Enviar el id del usuario al backend
 
     try {
-      console.log("Enviando imagen...");
       const response = await fetch(
-        "https://CamiMujica.pythonanywhere.com/detectar_y_verificar",
+        "https://CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada", // Llamamos a la API que registra la entrada
         {
           method: "POST",
           body: formData,
         }
       );
 
-      console.log("Respuesta recibida");
-      if (!response.ok) {
-        throw new Error("Error al procesar la imagen en el modelo.");
-      }
-
       const data = await response.json();
-      console.log("Datos de la respuesta: ", data);
 
-      if (
-        data.estado === "Placa registrada" ||
-        data.estado === "Placa no registrada"
-      ) {
+      if (response.ok) {
+        // Mostrar imagen y placa detectada siempre
         setDetectedPlate(data.placa_detectada);
         setPlateImage(`data:image/jpeg;base64,${data.placa_imagen}`);
-        setIsPlateRegistered(data.estado === "Placa registrada");
 
-        // Agregar el 'id' del usuario a la URL para verificar los detalles de la placa solo si la registró el usuario
-        const detailsResponse = await fetch(
-          `https://CamiMujica.pythonanywhere.com/vehiculo/${data.placa_detectada}?id=${userId}`
-        );
-        const detailsData = await detailsResponse.json();
-
-        if (detailsResponse.ok) {
-          setVehicleDetails(detailsData);
+        // Si ya tiene una entrada registrada sin salida
+        if (data.entrada_registrada) {
+          toastr.info(
+            "El vehículo ya tiene una entrada registrada. Por favor, registre la salida."
+          );
         } else {
-          setVehicleDetails(null);
+          toastr.success("Placa detectada y entrada registrada.");
+        }
+
+        // Procesar el estado de la placa (registrada o no registrada)
+        if (
+          data.estado === "Placa registrada" ||
+          data.estado === "Placa no registrada"
+        ) {
+          setIsPlateRegistered(data.estado === "Placa registrada");
+
+          // Si la placa está registrada, obtenemos los detalles del vehículo
+          if (data.estado === "Placa registrada") {
+            const detailsResponse = await fetch(
+              `https://CamiMujica.pythonanywhere.com/vehiculo/${data.placa_detectada}?id=${userId}`
+            );
+            const detailsData = await detailsResponse.json();
+
+            if (detailsResponse.ok) {
+              setVehicleDetails(detailsData); // Seteamos los detalles del vehículo
+            } else {
+              setVehicleDetails(null);
+              toastr.error("No se pudieron obtener los detalles del vehículo.");
+            }
+          } else {
+            // Si la placa no está registrada
+            setVehicleDetails(null);
+            toastr.error("Placa no registrada.");
+          }
         }
       } else {
-        setError("No se detectaron placas.");
+        toastr.error(data.mensaje || "No se detectaron placas.");
       }
     } catch (err) {
+      toastr.error("Error al procesar la imagen.");
       console.error("Error al enviar la imagen:", err);
-      setError(`Error al procesar la imagen: ${err.message}`);
     }
   };
 
@@ -236,70 +250,6 @@ const CameraSection = () => {
     detectPlate(file);
   };
 
-  const registerEntry = async () => {
-    if (!detectedPlate) {
-      toastr.error("No hay una placa detectada para registrar.");
-      return;
-    }
-
-    // Verificar si la placa está registrada
-    if (isPlateRegistered === false) {
-      toastr.error(
-        "La placa no está registrada. No puedes registrar la entrada."
-      );
-      return;
-    }
-
-    try {
-      // Obtener el usuario_id del sistema de autenticación
-      const userId = localStorage.getItem("id"); // Asegúrate de haber guardado este valor durante el inicio de sesión
-
-      if (!userId) {
-        toastr.error("No se pudo determinar el usuario autenticado.");
-        return;
-      }
-
-      // Llamar al nuevo endpoint de la API que maneja ambos procesos de verificación y registro
-      const response = await fetch(
-        "https://CamiMujica.pythonanywhere.com/entrada",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            numero_placa: detectedPlate,
-            usuario_id: parseInt(userId), // Convertir a entero, si es necesario
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        if (data.entrada_registrada) {
-          toastr.info(
-            "El vehículo ya tiene una entrada registrada. Por favor, registre la salida."
-          );
-        } else {
-          toastr.success(data.message || "Entrada registrada exitosamente.");
-
-          // Recargar la página después de un registro exitoso
-          window.location.reload(); // Esto recargará toda la página y obtendrá los datos actualizados
-        }
-      } else {
-        toastr.error(
-          data.error || data.message || "Error al registrar la entrada."
-        );
-      }
-    } catch (err) {
-      console.error("Error al registrar la entrada:", err);
-      toastr.error(
-        "Error al registrar la entrada. Por favor, intenta nuevamente."
-      );
-    }
-  };
-
   return (
     <div className="container mx-auto p-6 bg-gray-200 rounded-xl shadow-lg">
       <div className="flex flex-col md:flex-row gap-6">
@@ -327,15 +277,6 @@ const CameraSection = () => {
               <i className="fas fa-car-side mr-2"></i>{" "}
               {/* Icono para Nuevo Registro */}
               <span>Nuevo Registro</span>
-            </button>
-
-            <button
-              className="px-6 py-3 bg-blue-700 text-white rounded-lg hover:bg-blue-800 w-full md:w-auto flex items-center justify-center"
-              onClick={registerEntry}
-            >
-              <i className="fas fa-sign-in-alt mr-2"></i>{" "}
-              {/* Icono para Registrar Entrada */}
-              <span>Registrar Entrada</span>
             </button>
 
             <button
