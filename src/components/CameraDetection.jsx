@@ -6,43 +6,29 @@ const detectarYVerificarPlaca = async (blob, userId) => {
   try {
     const formData = new FormData();
     formData.append("file", blob, "photo.jpg");
+    formData.append("id", userId);
 
     const response = await fetch(
       "https://CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada",
       {
         method: "POST",
         body: formData,
-        headers: {
-          id: userId, // Pasa el id del usuario en los headers
-        },
       }
     );
 
     const data = await response.json();
-    if (response.ok) {
-      return {
-        estado: data.estado,
-        placa_detectada: data.placa_detectada,
-        placa_imagen: data.placa_imagen,
-        vehiculo_id: data.vehiculo_id,
-      };
-    } else {
-      console.error("Error en la API:", data.error);
-      return { estado: "Error en la detección de la placa" };
-    }
+    console.log("Respuesta de la API:", data);
+    return data;
   } catch (error) {
     console.error("Error al enviar la solicitud a la API:", error);
-    return { estado: "Error al procesar la imagen" };
+    return { error: "Error al procesar la imagen" };
   }
 };
 
 const CameraDetection = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const [resultados, setResultados] = useState({});
-  const [modalVisible, setModalVisible] = useState(false);
-  const [mensajePlaca, setMensajePlaca] = useState("");
-  const [colorModal, setColorModal] = useState("");
+  const [resultado, setResultado] = useState(null);
 
   useEffect(() => {
     const startCamera = async () => {
@@ -76,35 +62,44 @@ const CameraDetection = () => {
 
         const userId = localStorage.getItem("id");
         const data = await detectarYVerificarPlaca(blob, userId);
-        setResultados(data);
 
-        if (data.estado === "Placa registrada") {
-          setMensajePlaca(`La placa ${data.placa_detectada} está registrada.`);
-          setColorModal("text-success");
-        } else if (data.estado === "Placa no registrada") {
-          setMensajePlaca(
-            `Placa detectada (${data.placa_detectada}), pero no registrada.`
-          );
-          setColorModal("text-danger");
+        if (
+          data &&
+          (data.estado === "Placa registrada" ||
+            data.estado === "Placa no registrada")
+        ) {
+          // Mostrar siempre los mismos datos: imagen y placa detectada
+          setResultado({
+            mensaje: data.mensaje,
+            estado: data.estado,
+            placa_imagen: data.placa_imagen || null,
+            placa_detectada:
+              data.placa_detectada || "No se detectaron caracteres",
+          });
         } else {
-          setMensajePlaca("Error al procesar la placa.");
-          setColorModal("text-warning");
+          setResultado({
+            mensaje: "Error al procesar la imagen o no se detectaron placas.",
+            estado: "Error",
+            placa_imagen: null,
+            placa_detectada: null,
+          });
         }
-
-        setModalVisible(true);
       }
     } catch (err) {
       console.error("Error al procesar el cuadro:", err);
-      setMensajePlaca("Error al procesar la imagen.");
-      setColorModal("text-danger");
-      setModalVisible(true);
+      setResultado({
+        mensaje: "Error al procesar la imagen.",
+        estado: "Error",
+        placa_imagen: null,
+        placa_detectada: null,
+      });
     }
   };
 
   return (
-    <div className="min-h-screen bg-light p-6 flex flex-column align-items-center">
-      <header className="bg-primary text-white py-4 px-6 text-center text-lg font-bold w-100 mb-4">
-        RUMIPARK - Detección de Placas
+    <div className="min-h-screen bg-light p-6">
+      <header className="bg-primary text-white py-4 px-6 text-center text-lg font-bold">
+        Detección de Placas
       </header>
 
       <div className="text-center">
@@ -115,46 +110,23 @@ const CameraDetection = () => {
         </button>
       </div>
 
-      <div
-        className={`modal fade ${modalVisible ? "show d-block" : ""}`}
-        style={modalVisible ? { display: "block" } : { display: "none" }}
-        tabIndex="-1"
-        role="dialog"
-      >
-        <div className="modal-dialog" role="document">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title">Resultado de la detección</h5>
-              <button
-                type="button"
-                className="close"
-                onClick={() => setModalVisible(false)}
-              >
-                <span>&times;</span>
-              </button>
-            </div>
-            <div className="modal-body">
-              <p className={colorModal}>{mensajePlaca}</p>
-              {resultados.placa_imagen && (
-                <img
-                  src={`data:image/jpeg;base64,${resultados.placa_imagen}`}
-                  alt="Placa detectada"
-                  className="img-fluid mt-3 border"
-                />
-              )}
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setModalVisible(false)}
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
+      {resultado && (
+        <div className="mt-5 p-4 border rounded shadow bg-white">
+          <h5>{resultado.mensaje}</h5>
+          {resultado.placa_imagen && (
+            <img
+              src={`data:image/jpeg;base64,${resultado.placa_imagen}`}
+              alt="Placa detectada"
+              className="img-fluid mt-3 border rounded"
+            />
+          )}
+          {resultado.placa_detectada && (
+            <p className="mt-3">
+              <strong>Placa detectada:</strong> {resultado.placa_detectada}
+            </p>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 };

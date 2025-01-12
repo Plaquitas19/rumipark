@@ -150,7 +150,7 @@ const CameraSection = () => {
   };
 
   const detectPlate = async (file) => {
-    const userId = localStorage.getItem("id"); // Obtener el id del usuario desde el localStorage
+    const userId = localStorage.getItem("id");
 
     if (!userId) {
       toastr.error("Usuario no autenticado");
@@ -159,11 +159,11 @@ const CameraSection = () => {
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("id", userId); // Enviar el id del usuario al backend
+    formData.append("id", userId);
 
     try {
       const response = await fetch(
-        "https://CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada", // Llamamos a la API que registra la entrada
+        "https://CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada",
         {
           method: "POST",
           body: formData,
@@ -173,44 +173,43 @@ const CameraSection = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Mostrar imagen y placa detectada siempre
+        // Mostrar siempre la imagen y la placa detectada
         setDetectedPlate(data.placa_detectada);
         setPlateImage(`data:image/jpeg;base64,${data.placa_imagen}`);
 
-        // Si ya tiene una entrada registrada sin salida
-        if (data.entrada_registrada) {
-          toastr.info(
-            "El vehículo ya tiene una entrada registrada. Por favor, registre la salida."
-          );
-        } else {
-          toastr.success("Placa detectada y entrada registrada.");
-        }
+        // Solo mostrar este mensaje si la placa está registrada y la entrada no fue registrada
+        if (data.estado === "Placa registrada") {
+          setIsPlateRegistered(true);
 
-        // Procesar el estado de la placa (registrada o no registrada)
-        if (
-          data.estado === "Placa registrada" ||
-          data.estado === "Placa no registrada"
-        ) {
-          setIsPlateRegistered(data.estado === "Placa registrada");
+          if (!data.entrada_registrada) {
+            toastr.success("Placa detectada y entrada registrada.");
+          } else {
+            toastr.info(
+              "El vehículo ya tiene una entrada registrada. Por favor, registre la salida."
+            );
+          }
 
-          // Si la placa está registrada, obtenemos los detalles del vehículo
-          if (data.estado === "Placa registrada") {
+          try {
             const detailsResponse = await fetch(
               `https://CamiMujica.pythonanywhere.com/vehiculo/${data.placa_detectada}?id=${userId}`
             );
             const detailsData = await detailsResponse.json();
 
             if (detailsResponse.ok) {
-              setVehicleDetails(detailsData); // Seteamos los detalles del vehículo
+              setVehicleDetails(detailsData);
             } else {
               setVehicleDetails(null);
               toastr.error("No se pudieron obtener los detalles del vehículo.");
             }
-          } else {
-            // Si la placa no está registrada
-            setVehicleDetails(null);
-            toastr.error("Placa no registrada.");
+          } catch (err) {
+            console.error("Error al obtener detalles del vehículo:", err);
+            toastr.error("No se pudieron obtener los detalles del vehículo.");
           }
+        } else if (data.estado === "Placa no registrada") {
+          setIsPlateRegistered(false);
+          toastr.warning(
+            "Placa no registrada. Por favor, registre el vehículo para procesar la entrada."
+          );
         }
       } else {
         toastr.error(data.mensaje || "No se detectaron placas.");
@@ -336,7 +335,7 @@ const CameraSection = () => {
                   >
                     {isPlateRegistered
                       ? "Placa registrada"
-                      : "Placa no registrada"}
+                      : "Placa no registrada. Por favor, registre el vehículo."}
                   </p>
                   <img
                     src={plateImage}

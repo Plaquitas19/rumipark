@@ -129,7 +129,7 @@ function VehicleTable() {
                 </td>
                 <td className="py-2 px-4 border-b">
                   <span
-                    className={`inline-block px-3 py-1 rounded-md text-xs font-medium flex items-center ${
+                    className={`px-3 py-1 rounded-md text-xs font-medium flex items-center ${
                       vehicle.status === "Entrada"
                         ? "bg-green-200 text-green-800"
                         : "bg-orange-200 text-orange-800"
