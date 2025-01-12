@@ -11,7 +11,7 @@ function VehicleTable() {
 
   // Conectar al WebSocket para actualizaciones en tiempo real
   const connectSocket = useCallback(() => {
-    const socket = io("http://localhost:5000");
+    const socket = io("https://CamiMujica.pythonanywhere.com");
 
     socket.on("actualizar_registros", (nuevoRegistro) => {
       setVehicles((prevVehicles) => {
@@ -48,7 +48,7 @@ function VehicleTable() {
     connectSocket(); // Conectar al WebSocket solo una vez
   }, [connectSocket]);
 
-  // Cargar los registros iniciales
+  // Cargar los registros iniciales y actualizar cada segundo
   useEffect(() => {
     const fetchRegistros = async () => {
       try {
@@ -84,7 +84,10 @@ function VehicleTable() {
       }
     };
 
-    fetchRegistros();
+    fetchRegistros(); // Llamada inicial
+    const intervalId = setInterval(fetchRegistros, 1000); // Actualización cada 1 segundo
+
+    return () => clearInterval(intervalId); // Limpiar intervalo cuando el componente se desmonte
   }, [userId]);
 
   if (isLoading) {
