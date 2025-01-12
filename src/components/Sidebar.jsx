@@ -18,9 +18,9 @@ function Sidebar() {
     <div>
       {/* Barra lateral */}
       <div
-        className={`fixed top-0 left-0 h-screen w-[200px] sm:w-[230px] lg:w-[260px] bg-[#1da4cf] text-white flex flex-col justify-between p-4 z-10 ${
-          isMenuOpen ? "block" : "hidden"
-        } lg:block`}
+        className={`fixed top-0 left-0 h-screen w-[200px] sm:w-[230px] lg:w-[260px] bg-[#1da4cf] text-white flex flex-col justify-between p-4 z-10 transform ${
+          isMenuOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0 transition-transform duration-300`}
       >
         {/* Contenido superior */}
         <div>
@@ -55,8 +55,8 @@ function Sidebar() {
           </nav>
         </div>
 
-        {/* Botón "Salir" con la misma estructura que los demás */}
-        <div>
+        {/* Botón "Salir" posicionado al fondo */}
+        <div className="mt-auto">
           <Link
             to="#"
             onClick={handleLogout} // Lógica de cierre de sesión

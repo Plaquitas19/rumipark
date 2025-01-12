@@ -99,7 +99,7 @@ function VehicleTable() {
   }
 
   return (
-    <div className="bg-white shadow-md rounded-lg p-6 mx-auto max-w-full overflow-hidden">
+    <div className="bg-white shadow-md rounded-lg p-6 mx-auto max-w-full overflow-x-auto">
       <table className="table-auto w-full text-sm text-gray-700">
         <thead>
           <tr className="bg-blue-50 text-blue-800">
@@ -126,7 +126,7 @@ function VehicleTable() {
                   index % 2 === 0 ? "bg-white" : "bg-blue-50"
                 } hover:bg-blue-200 transition-colors duration-300`}
               >
-                <td className="py-2 px-4 border-b flex items-center">
+                <td className="py-2 px-4 border-b flex items-center break-words">
                   <i className="fas fa-car text-blue-500 mr-2"></i>
                   {vehicle.plate}
                 </td>
@@ -148,11 +148,11 @@ function VehicleTable() {
                     {vehicle.status}
                   </span>
                 </td>
-                <td className="py-2 px-4 border-b flex items-center">
+                <td className="py-2 px-4 border-b flex items-center break-words">
                   <i className="fas fa-calendar-alt text-blue-500 mr-2"></i>
                   {vehicle.date}
                 </td>
-                <td className="py-2 px-4 border-b flex items-center">
+                <td className="py-2 px-4 border-b flex items-center break-words">
                   <i className="fas fa-clock text-green-500 mr-2"></i>
                   {vehicle.time}
                 </td>
