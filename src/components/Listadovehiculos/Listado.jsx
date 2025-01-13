@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { utils, writeFile } from "xlsx";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
 
 function Listado() {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [time, setTime] = useState(new Date().toLocaleString());
-  const navigate = useNavigate(); // Usamos el hook para redirigir al usuario si no está autenticado
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Verificamos si hay un token de autenticación
-    const userId = localStorage.getItem("id"); // Asegúrate de almacenar el ID del usuario cuando se autentique
+    const userId = localStorage.getItem("id");
 
     if (!userId) {
-      navigate("/"); // Redirige al login si no hay ID
+      navigate("/");
       return;
     }
 
@@ -25,7 +27,7 @@ function Listado() {
           {
             headers: {
               "Content-Type": "application/json",
-              id: userId, // Enviamos el ID del usuario autenticado en el header
+              id: userId,
             },
           }
         );
@@ -47,6 +49,50 @@ function Listado() {
     return () => clearInterval(intervalId);
   }, [navigate]);
 
+  const exportToExcel = () => {
+    const worksheet = utils.json_to_sheet(records);
+    const workbook = utils.book_new();
+    utils.book_append_sheet(workbook, worksheet, "Registros");
+    writeFile(workbook, `registros_${new Date().toLocaleDateString()}.xlsx`);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+
+    // Configurar encabezado y filas de la tabla
+    const tableColumn = [
+      "Placa",
+      "Estado",
+      "Fecha Entrada",
+      "Hora Entrada",
+      "Fecha Salida",
+      "Hora Salida",
+      "Observación",
+    ];
+    const tableRows = records.map((record) => [
+      record.numero_placa,
+      record.estado,
+      record.fecha_entrada || "N/A",
+      record.hora_entrada || "N/A",
+      record.fecha_salida || "No registrada",
+      record.hora_salida || "No registrada",
+      record.observacion || "Sin observación",
+    ]);
+
+    // Añadir título al PDF
+    doc.text("Listado de Entrada y Salida de Vehículos", 14, 10);
+
+    // Configuración de autoTable
+    doc.autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 20,
+    });
+
+    // Descargar el PDF con nombre dinámico
+    doc.save(`registros_${new Date().toLocaleDateString()}.pdf`);
+  };
+
   if (isLoading) {
     return <div className="text-center p-4">Cargando datos...</div>;
   }
@@ -57,7 +103,6 @@ function Listado() {
 
   return (
     <div className="bg-white shadow-xl rounded-lg p-6 mx-auto max-w-full md:max-w-7xl">
-      {/* Encabezado */}
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-3xl font-bold text-blue-800 leading-tight flex items-center">
           <i className="fas fa-list-alt mr-3 text-blue-600"></i>
@@ -67,6 +112,22 @@ function Listado() {
           <i className="fas fa-clock mr-2 text-green-600"></i>
           {time}
         </div>
+      </div>
+
+      {/* Botones de exportación */}
+      <div className="flex justify-end gap-4 mb-6">
+        <button
+          onClick={exportToExcel}
+          className="px-4 py-2 bg-green-500 text-white rounded-md shadow-md hover:bg-green-600 transition duration-200"
+        >
+          <i className="fas fa-file-excel mr-2"></i> Exportar a Excel
+        </button>
+        <button
+          onClick={exportToPDF}
+          className="px-4 py-2 bg-red-500 text-white rounded-md shadow-md hover:bg-red-600 transition duration-200"
+        >
+          <i className="fas fa-file-pdf mr-2"></i> Exportar a PDF
+        </button>
       </div>
 
       {/* Listado de Registros */}
@@ -80,7 +141,9 @@ function Listado() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
                   <i className="fas fa-car-side text-blue-500 text-xl mr-2"></i>
-                  <span className="text-lg font-bold text-blue-800">{record.numero_placa}</span>
+                  <span className="text-lg font-bold text-blue-800">
+                    {record.numero_placa}
+                  </span>
                 </div>
                 <div
                   className={`inline-block px-3 py-1 rounded-md text-xs font-medium ${
@@ -117,7 +180,9 @@ function Listado() {
                   <i className="fas fa-calendar-check text-blue-500 mr-2"></i>
                   <span>
                     <strong>Fecha Salida:</strong>{" "}
-                    {record.fecha_salida ? record.fecha_salida : "No registrada"}
+                    {record.fecha_salida
+                      ? record.fecha_salida
+                      : "No registrada"}
                   </span>
                 </div>
                 <div className="flex items-center">

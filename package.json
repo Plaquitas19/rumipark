@@ -13,6 +13,8 @@
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "font-awesome": "^4.7.0",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
     "jwt-decode": "^4.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -22,7 +24,8 @@
     "socket.io-client": "^4.8.1",
     "tesseract.js": "^5.1.1",
     "toastr": "^2.1.4",
-    "web-vitals": "^4.2.4"
+    "web-vitals": "^4.2.4",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "react-scripts start",
