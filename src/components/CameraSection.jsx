@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import NewVehicleModal from "./NewVehicleModal";
 import "@fortawesome/fontawesome-free/css/all.css"; // Si usas FontAwesome
 import toastr from "toastr";
@@ -24,6 +24,22 @@ const CameraSection = () => {
     useState(false);
   const [isEditingPlate, setIsEditingPlate] = useState(false);
   const [editablePlate, setEditablePlate] = useState("");
+
+  // Temporalizador para detectar cada 5 segundos automáticamente
+  useEffect(() => {
+    let detectionInterval;
+    if (isCameraActive) {
+      // Setea el temporizador para capturar y procesar cada 5 segundos
+      detectionInterval = setInterval(() => {
+        detectFromCamera();
+      }, 2000); // Cada 5 segundos
+    } else {
+      // Limpiar intervalo cuando la cámara no está activa
+      clearInterval(detectionInterval);
+    }
+
+    return () => clearInterval(detectionInterval); // Limpiar intervalo al desmontarse el componente
+  }, [isCameraActive]); // Include detectFromCamera in the dependencies
 
   /// Función para manejar el envío de la observación
   const handleExitObservationSubmit = async (observation) => {
@@ -101,18 +117,15 @@ const CameraSection = () => {
 
   const startCamera = async () => {
     try {
-      // Obtener dispositivos de medios disponibles (cámaras)
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(
         (device) => device.kind === "videoinput"
       );
 
-      // Intentar usar la cámara trasera primero, si está disponible
       let backCamera = videoDevices.find((device) =>
         device.label.toLowerCase().includes("back")
       );
 
-      // Si no hay cámara trasera, usar la cámara frontal
       const camera =
         backCamera ||
         videoDevices.find((device) => device.kind === "videoinput");
@@ -121,7 +134,6 @@ const CameraSection = () => {
         throw new Error("No hay cámaras disponibles.");
       }
 
-      // Usar el dispositivo seleccionado para obtener la transmisión de la cámara
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: camera.deviceId },
       });
@@ -246,7 +258,7 @@ const CameraSection = () => {
     const imageData = canvas.toDataURL("image/jpeg");
     const file = dataURLToFile(imageData, "captura.jpg");
 
-    detectPlate(file);
+    detectPlate(file); // Llama a la función que detecta la placa automáticamente
   };
 
   return (
@@ -303,13 +315,6 @@ const CameraSection = () => {
                     } mr-2`}
                   ></i>
                   {isCameraActive ? "Desactivar cámara" : "Activar cámara"}
-                </button>
-
-                <button
-                  onClick={detectFromCamera}
-                  className="px-6 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800"
-                >
-                  <i className="fas fa-video mr-2"></i>Detectar Placa
                 </button>
 
                 <label className="px-6 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 cursor-pointer">

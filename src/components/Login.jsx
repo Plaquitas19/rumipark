@@ -4,7 +4,14 @@ import toastr from "toastr";
 import fondo from "../assets/fondo-login.png";
 import icono from "../assets/icono.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faLock, faEye, faEyeSlash, faEnvelope } from "@fortawesome/free-solid-svg-icons";
+import {
+  faUser,
+  faLock,
+  faEye,
+  faEyeSlash,
+  faEnvelope,
+} from "@fortawesome/free-solid-svg-icons";
+import { Link } from "react-router-dom"; // Importa Link de react-router-dom
 
 function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -27,18 +34,18 @@ function Login() {
         },
         body: JSON.stringify({ username, password }),
       });
-  
+
       if (response.ok) {
         const data = await response.json();
-  
+
         // Guardar los datos del usuario en localStorage
-        localStorage.setItem("auth_token", data.token); 
-        localStorage.setItem("username", data.username);  // Guardamos el nombre de usuario
+        localStorage.setItem("auth_token", data.token);
+        localStorage.setItem("username", data.username); // Guardamos el nombre de usuario
         localStorage.setItem("id", data.id);
         localStorage.setItem("plan_id", data.plan_id);
-  
+
         toastr.success("Inicio de sesión exitoso");
-  
+
         // Redirigir a /dashboard/main
         navigate("/dashboard/main");
       } else {
@@ -63,7 +70,9 @@ function Login() {
       });
 
       if (response.ok) {
-        toastr.success("Usuario registrado exitosamente. Ahora puedes iniciar sesión.");
+        toastr.success(
+          "Usuario registrado exitosamente. Ahora puedes iniciar sesión."
+        );
         setIsRegistering(false); // Cambiar de nuevo a la vista de inicio de sesión
       } else {
         const errorData = await response.json();
@@ -81,11 +90,16 @@ function Login() {
     >
       {/* Panel izquierdo */}
       <div className="lg:w-1/2 w-full flex justify-center items-center p-4">
-        <img
-          src={icono}
-          alt="Logo"
-          className="w-64 h-64 md:w-96 md:h-96 lg:w-128 lg:h-128 object-contain"
-        />
+        {/* Envolvemos la imagen del icono con Link para redirigir */}
+        <Link to="/">
+          {" "}
+          {/* Redirige a la ruta "/" para PricingPlans */}
+          <img
+            src={icono}
+            alt="Logo"
+            className="w-64 h-64 md:w-96 md:h-96 lg:w-128 lg:h-128 object-contain cursor-pointer"
+          />
+        </Link>
       </div>
 
       {/* Panel derecho */}
@@ -166,7 +180,9 @@ function Login() {
           style={{ color: "#1da4cf" }}
           onClick={() => setIsRegistering(!isRegistering)}
         >
-          {isRegistering ? "¿Ya tienes cuenta? Inicia sesión aquí" : "¿No tienes cuenta? Regístrate aquí"}
+          {isRegistering
+            ? "¿Ya tienes cuenta? Inicia sesión aquí"
+            : "¿No tienes cuenta? Regístrate aquí"}
         </button>
       </div>
     </div>

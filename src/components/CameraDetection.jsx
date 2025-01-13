@@ -17,7 +17,6 @@ const detectarYVerificarPlaca = async (blob, userId) => {
     );
 
     const data = await response.json();
-    console.log("Respuesta de la API:", data);
     return data;
   } catch (error) {
     console.error("Error al enviar la solicitud a la API:", error);
@@ -29,6 +28,7 @@ const CameraDetection = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [resultado, setResultado] = useState(null);
+  const [detected, setDetected] = useState(false); // Para indicar si ya se detectó la placa
 
   useEffect(() => {
     const startCamera = async () => {
@@ -46,55 +46,73 @@ const CameraDetection = () => {
     };
 
     startCamera();
-  }, []);
 
-  const handleCapture = async () => {
-    try {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
+    const intervalId = setInterval(async () => {
+      if (detected) return; // Si ya se detectó la placa, dejamos de procesar
 
-      if (canvas && video) {
-        const context = canvas.getContext("2d");
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      try {
+        const canvas = canvasRef.current;
+        const video = videoRef.current;
 
-        const dataURL = canvas.toDataURL("image/jpeg");
-        const blob = await fetch(dataURL).then((res) => res.blob());
+        if (canvas && video) {
+          const context = canvas.getContext("2d");
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        const userId = localStorage.getItem("id");
-        const data = await detectarYVerificarPlaca(blob, userId);
+          const dataURL = canvas.toDataURL("image/jpeg");
+          const blob = await fetch(dataURL).then((res) => res.blob());
 
-        if (
-          data &&
-          (data.estado === "Placa registrada" ||
-            data.estado === "Placa no registrada")
-        ) {
-          // Mostrar siempre los mismos datos: imagen y placa detectada
-          setResultado({
-            mensaje: data.mensaje,
-            estado: data.estado,
-            placa_imagen: data.placa_imagen || null,
-            placa_detectada:
-              data.placa_detectada || "No se detectaron caracteres",
-          });
-        } else {
-          setResultado({
-            mensaje: "Error al procesar la imagen o no se detectaron placas.",
-            estado: "Error",
-            placa_imagen: null,
-            placa_detectada: null,
-          });
+          const userId = localStorage.getItem("id");
+          const data = await detectarYVerificarPlaca(blob, userId);
+
+          if (
+            data &&
+            (data.estado === "Placa registrada" ||
+              data.estado === "Placa no registrada")
+          ) {
+            setResultado({
+              mensaje: data.mensaje,
+              estado: data.estado,
+              placa_imagen: data.placa_imagen || null,
+              placa_detectada:
+                data.placa_detectada || "No se detectaron caracteres",
+            });
+
+            if (data.estado === "Placa registrada") {
+              // Aquí es donde puedes realizar alguna acción, como la actualización del estado en la base de datos
+              console.log(
+                "Placa registrada con éxito, actualizando el sistema..."
+              );
+            } else {
+              // Si la placa no estaba registrada, puedes dar la opción de registrar
+              console.log("Placa no registrada, dando opción de registro...");
+            }
+
+            setDetected(true); // Detener la detección
+          } else {
+            setResultado({
+              mensaje: "Error al procesar la imagen o no se detectaron placas.",
+              estado: "Error",
+              placa_imagen: null,
+              placa_detectada: null,
+            });
+          }
         }
+      } catch (err) {
+        console.error("Error al procesar el cuadro:", err);
+        setResultado({
+          mensaje: "Error al procesar la imagen.",
+          estado: "Error",
+          placa_imagen: null,
+          placa_detectada: null,
+        });
       }
-    } catch (err) {
-      console.error("Error al procesar el cuadro:", err);
-      setResultado({
-        mensaje: "Error al procesar la imagen.",
-        estado: "Error",
-        placa_imagen: null,
-        placa_detectada: null,
-      });
-    }
-  };
+    }, 1000); // Capturar cada 1000ms (1 segundo)
+
+    // Limpiar intervalos al desmontar el componente
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [detected]);
 
   return (
     <div className="min-h-screen bg-light p-6">
@@ -105,9 +123,6 @@ const CameraDetection = () => {
       <div className="text-center">
         <video ref={videoRef} className="border rounded mb-4" />
         <canvas ref={canvasRef} className="d-none" width={640} height={480} />
-        <button onClick={handleCapture} className="btn btn-primary">
-          Detectar Placa
-        </button>
       </div>
 
       {resultado && (
