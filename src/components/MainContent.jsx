@@ -73,11 +73,17 @@ function MainContent() {
 
   return (
     <div className="w-full p-6">
-      <header className="text-blue-900 text-lg font-bold mb-4">
-        {saludo}, {username ? username : "Usuario"}
+      <header className="text-lg font-bold mb-4">
+        <span className="text-[#167f9f]">{saludo}</span>,{" "}
+        <span className="text-[#167f9f]">
+          {username ? username : "Usuario"}
+        </span>
       </header>
 
-      <div className="bg-gray-200 rounded-lg p-4 mb-6 shadow-md">
+      <div
+        className="bg-gray-200 rounded-lg p-4 mb-6 shadow-md border-4"
+        style={{ borderColor: "#167f9f" }}
+      >
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-700">
             Detección de Placas

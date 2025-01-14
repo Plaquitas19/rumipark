@@ -5,6 +5,7 @@ import "font-awesome/css/font-awesome.min.css";
 
 function Sidebar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -12,6 +13,7 @@ function Sidebar() {
   const handleLogout = () => {
     localStorage.removeItem("auth_token"); // Eliminar el token del almacenamiento
     navigate("/login", { replace: true }); // Redirigir al login y reemplazar el historial
+    window.location.reload(); // Recargar la página
   };
 
   return (
@@ -55,15 +57,13 @@ function Sidebar() {
           </nav>
         </div>
 
-        {/* Botón "Salir" posicionado al fondo */}
         <div className="mt-auto">
-          <Link
-            to="#"
-            onClick={handleLogout} // Acción de cerrar sesión
-            className="hover:bg-[#167f9f] p-2 rounded text-left text-xs sm:text-sm flex items-center"
+          <button
+            onClick={() => setIsModalOpen(true)} // Mostrar modal al hacer clic
+            className="hover:bg-[#167f9f] p-2 rounded text-left text-xs sm:text-sm flex items-center w-full"
           >
             <i className="fa fa-sign-out mr-3 text-lg"></i> Salir
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -76,6 +76,35 @@ function Sidebar() {
       >
         <i className="fa fa-bars"></i>
       </button>
+
+      {/* Modal de confirmación */}
+      {isModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 sm:p-8 shadow-lg max-w-sm w-full">
+            <h2
+              className="text-lg sm:text-xl font-semibold mb-4 text-center"
+              style={{ color: "#167f9f" }}
+            >
+              ¿Estás seguro de que deseas salir?
+            </h2>
+            <div className="flex justify-between">
+              <button
+                onClick={() => setIsModalOpen(false)} // Cerrar el modal
+                className="py-2 px-4 rounded-lg bg-gray-200 text-sm sm:text-base font-medium text-gray-700 hover:bg-gray-300 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleLogout} // Confirmar el cierre de sesión
+                className="py-2 px-4 rounded-lg text-sm sm:text-base font-medium text-white transition"
+                style={{ backgroundColor: "#167f9f" }}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

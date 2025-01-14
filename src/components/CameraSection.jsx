@@ -39,6 +39,7 @@ const CameraSection = () => {
     }
 
     return () => clearInterval(detectionInterval); // Limpiar intervalo al desmontarse el componente
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCameraActive]); // Include detectFromCamera in the dependencies
 
   /// Función para manejar el envío de la observación
@@ -282,20 +283,18 @@ const CameraSection = () => {
 
           <div className="flex flex-col md:flex-row justify-between w-full mt-4 px-4 gap-4">
             <button
-              className="px-6 py-3 bg-purple-700 text-white rounded-lg hover:bg-purple-800 w-full md:w-auto flex items-center justify-center"
+              className="px-6 py-3 bg-[#167f9f] text-white rounded-lg hover:bg-[#146c83] w-full md:w-auto flex items-center justify-center"
               onClick={() => setIsNewVehicleModalOpen(true)}
             >
-              <i className="fas fa-car-side mr-2"></i>{" "}
-              {/* Icono para Nuevo Registro */}
+              <i className="fas fa-car-side mr-2"></i>
               <span>Nuevo Registro</span>
             </button>
 
             <button
-              className="px-6 py-3 bg-green-700 text-white rounded-lg hover:bg-green-800 w-full md:w-auto flex items-center justify-center"
-              onClick={() => setIsExitObservationModalOpen(true)} // Abre el modal
+              className="px-6 py-3 bg-[#167f9f] text-white rounded-lg hover:bg-[#146c83] w-full md:w-auto flex items-center justify-center"
+              onClick={() => setIsExitObservationModalOpen(true)}
             >
-              <i className="fas fa-sign-out-alt mr-2"></i>{" "}
-              {/* Icono para Registrar Salida */}
+              <i className="fas fa-sign-out-alt mr-2"></i>
               <span>Registrar Salida</span>
             </button>
           </div>
@@ -307,7 +306,7 @@ const CameraSection = () => {
               <div className="flex gap-4 justify-center">
                 <button
                   onClick={handleCameraToggle}
-                  className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800"
+                  className="px-6 py-2 bg-[#167f9f] text-white rounded-lg hover:bg-[#146c83]"
                 >
                   <i
                     className={`fas ${
@@ -317,7 +316,7 @@ const CameraSection = () => {
                   {isCameraActive ? "Desactivar cámara" : "Activar cámara"}
                 </button>
 
-                <label className="px-6 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 cursor-pointer">
+                <label className="px-6 py-2 bg-[#167f9f] text-white rounded-lg hover:bg-[#146c83] cursor-pointer">
                   <i className="fas fa-upload mr-2"></i>Subir Imagen
                   <input
                     ref={fileInputRef}

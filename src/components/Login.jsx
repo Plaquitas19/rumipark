@@ -10,8 +10,9 @@ import {
   faEye,
   faEyeSlash,
   faEnvelope,
+  faArrowDown,
 } from "@fortawesome/free-solid-svg-icons";
-import { Link } from "react-router-dom"; // Importa Link de react-router-dom
+import { Link } from "react-router-dom";
 
 function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -37,16 +38,11 @@ function Login() {
 
       if (response.ok) {
         const data = await response.json();
-
-        // Guardar los datos del usuario en localStorage
         localStorage.setItem("auth_token", data.token);
-        localStorage.setItem("username", data.username); // Guardamos el nombre de usuario
+        localStorage.setItem("username", data.username);
         localStorage.setItem("id", data.id);
         localStorage.setItem("plan_id", data.plan_id);
-
         toastr.success("Inicio de sesión exitoso");
-
-        // Redirigir a /dashboard/main
         navigate("/dashboard/main");
       } else {
         const errorData = await response.json();
@@ -73,7 +69,7 @@ function Login() {
         toastr.success(
           "Usuario registrado exitosamente. Ahora puedes iniciar sesión."
         );
-        setIsRegistering(false); // Cambiar de nuevo a la vista de inicio de sesión
+        setIsRegistering(false);
       } else {
         const errorData = await response.json();
         toastr.error(errorData.message || "Error al registrar el usuario");
@@ -89,45 +85,58 @@ function Login() {
       style={{ backgroundImage: `url(${fondo})` }}
     >
       {/* Panel izquierdo */}
-      <div className="lg:w-1/2 w-full flex justify-center items-center p-4">
-        {/* Envolvemos la imagen del icono con Link para redirigir */}
+      <div className="lg:w-1/2 w-full flex justify-center items-center p-4 relative">
+        {/* Texto y flecha animados */}
+        <div className="absolute top-6 sm:top-12 md:top-16 lg:top-20 flex flex-col items-center space-y-4 animate-bounce">
+          <span
+            className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#f5f6f7] tracking-wide"
+            style={{ textShadow: "0 4px 10px rgba(22, 127, 159, 0.8)" }}
+          >
+            Descubre nuestros planes
+          </span>
+          <FontAwesomeIcon
+            icon={faArrowDown}
+            className="text-[#f9fafa] text-4xl sm:text-5xl lg:text-6xl transition-transform transform hover:scale-125 hover:text-[#4cd6f8] duration-300 ease-in-out"
+            style={{ textShadow: "0 4px 10px rgba(22, 127, 159, 0.8)" }}
+          />
+        </div>
+
+        {/* Logo redireccionable */}
         <Link to="/">
-          {" "}
-          {/* Redirige a la ruta "/" para PricingPlans */}
           <img
             src={icono}
             alt="Logo"
-            className="w-64 h-64 md:w-96 md:h-96 lg:w-128 lg:h-128 object-contain cursor-pointer"
+            className="w-40 h-40 sm:w-56 sm:h-56 md:w-72 md:h-72 lg:w-96 lg:h-96 object-contain cursor-pointer mt-16 sm:mt-24"
           />
         </Link>
       </div>
 
       {/* Panel derecho */}
-      <div className="lg:w-1/2 w-full flex flex-col justify-center items-center px-4">
+      <div className="lg:w-1/2 w-full flex flex-col justify-center items-center px-4 py-6 md:py-8">
         <h2
-          className="text-3xl md:text-4xl lg:text-5xl font-bold mb-10 text-center"
-          style={{ color: "#1da4cf" }}
+          className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-6 md:mb-10 text-center"
+          style={{ color: "#167f9f" }}
         >
           {isRegistering ? "Registrarse" : "Iniciar sesión"}
         </h2>
         <form
           onSubmit={isRegistering ? handleRegister : handleLogin}
-          className="space-y-6 md:space-y-8 w-full max-w-xs md:max-w-sm lg:max-w-md bg-white p-6 md:p-8 rounded-lg shadow-lg"
+          className="space-y-4 md:space-y-6 w-full max-w-xs sm:max-w-sm md:max-w-md bg-white p-4 sm:p-6 md:p-8 rounded-lg shadow-lg"
         >
           {isRegistering && (
             <div className="relative">
               <FontAwesomeIcon
                 icon={faEnvelope}
                 className="absolute left-4 top-4"
-                style={{ color: "#1da4cf" }}
+                style={{ color: "#167f9f" }}
               />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Correo electrónico"
-                className="w-full pl-14 pr-5 py-3 md:py-4 text-lg border-2 rounded-md shadow-sm bg-gray-50 text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
-                style={{ borderColor: "#1da4cf" }}
+                className="w-full pl-14 pr-5 py-2 sm:py-3 text-base sm:text-lg border-2 rounded-md shadow-sm bg-gray-50 text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+                style={{ borderColor: "#167f9f" }}
               />
             </div>
           )}
@@ -135,49 +144,52 @@ function Login() {
             <FontAwesomeIcon
               icon={faUser}
               className="absolute left-4 top-4"
-              style={{ color: "#1da4cf" }}
+              style={{ color: "#167f9f" }}
             />
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Nombre de usuario"
-              className="w-full pl-14 pr-5 py-3 md:py-4 text-lg border-2 rounded-md shadow-sm bg-gray-50 text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
-              style={{ borderColor: "#1da4cf" }}
+              className="w-full pl-14 pr-5 py-2 sm:py-3 text-base sm:text-lg border-2 rounded-md shadow-sm bg-gray-50 text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+              style={{ borderColor: "#167f9f" }}
             />
           </div>
           <div className="relative">
             <FontAwesomeIcon
               icon={faLock}
               className="absolute left-4 top-4"
-              style={{ color: "#1da4cf" }}
+              style={{ color: "#167f9f" }}
             />
             <input
               type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Contraseña"
-              className="w-full pl-14 pr-10 py-3 md:py-4 text-lg border-2 rounded-md shadow-sm bg-gray-50 text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
-              style={{ borderColor: "#1da4cf" }}
+              className="w-full pl-14 pr-10 py-2 sm:py-3 text-base sm:text-lg border-2 rounded-md shadow-sm bg-gray-50 text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+              style={{ borderColor: "#167f9f" }}
             />
             <FontAwesomeIcon
               icon={showPassword ? faEyeSlash : faEye}
               className="absolute right-4 top-4 cursor-pointer"
-              style={{ color: "#1da4cf" }}
+              style={{ color: "#167f9f" }}
               onClick={() => setShowPassword(!showPassword)}
             />
           </div>
           <button
             type="submit"
-            className="w-full py-3 md:py-4 text-white text-lg md:text-xl font-bold rounded-lg transition"
-            style={{ backgroundColor: "#1da4cf" }}
+            className="w-full py-2 sm:py-3 text-white text-base sm:text-lg md:text-xl font-bold rounded-lg transition"
+            style={{
+              backgroundColor: "#167f9f",
+              boxShadow: "0 4px 10px rgba(22, 127, 159, 0.8)",
+            }}
           >
             {isRegistering ? "Registrarse" : "Ingresar"}
           </button>
         </form>
         <button
-          className="mt-8 text-base md:text-lg underline"
-          style={{ color: "#1da4cf" }}
+          className="mt-6 text-sm sm:text-base md:text-lg underline"
+          style={{ color: "#167f9f" }}
           onClick={() => setIsRegistering(!isRegistering)}
         >
           {isRegistering
