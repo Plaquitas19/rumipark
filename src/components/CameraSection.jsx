@@ -3,15 +3,12 @@ import NewVehicleModal from "./NewVehicleModal";
 import "@fortawesome/fontawesome-free/css/all.css"; // Si usas FontAwesome
 import toastr from "toastr";
 import "toastr/build/toastr.min.css";
-
-// Asegúrate de haber instalado y agregado Font Awesome
 import "@fortawesome/fontawesome-free/css/all.css";
 
 const CameraSection = () => {
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
   const containerRef = useRef(null);
-
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [detectedPlate, setDetectedPlate] = useState("");
   const [plateImage, setPlateImage] = useState(null);
@@ -19,9 +16,6 @@ const CameraSection = () => {
   const [isNewVehicleModalOpen, setIsNewVehicleModalOpen] = useState(false);
   const [isPlateRegistered, setIsPlateRegistered] = useState(null);
   const [vehicleDetails, setVehicleDetails] = useState(null);
-  const [exitObservation, setExitObservation] = useState("");
-  const [isExitObservationModalOpen, setIsExitObservationModalOpen] =
-    useState(false);
   const [isEditingPlate, setIsEditingPlate] = useState(false);
   const [editablePlate, setEditablePlate] = useState("");
 
@@ -41,60 +35,6 @@ const CameraSection = () => {
     return () => clearInterval(detectionInterval); // Limpiar intervalo al desmontarse el componente
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCameraActive]); // Include detectFromCamera in the dependencies
-
-  /// Función para manejar el envío de la observación
-  const handleExitObservationSubmit = async (observation) => {
-    if (!detectedPlate) {
-      toastr.error("No hay una placa detectada para registrar.");
-      return;
-    }
-
-    // Asegurarnos de que el usuario esté autenticado y que el usuario_id esté disponible
-    const usuarioId = localStorage.getItem("id"); // O como obtienes el usuario_id de la autenticación
-
-    if (!usuarioId) {
-      toastr.error(
-        "No se ha encontrado el usuario. Por favor, asegúrate de estar autenticado."
-      );
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        "https://CamiMujica.pythonanywhere.com/salida",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            numero_placa: detectedPlate,
-            observacion: observation || "Sin observación",
-            usuario_id: usuarioId, // Enviamos el usuario_id con la solicitud
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toastr.success(data.message || "Salida registrada exitosamente.");
-        setExitObservation(""); // Limpia el campo de observación tras éxito
-
-        // Recargar la página después de registrar la salida
-        window.location.reload(); // Esto recargará toda la página y obtendrá los datos actualizados
-      } else {
-        toastr.error(data.message || "No se puede registrar la salida.");
-      }
-    } catch (err) {
-      console.error("Error al registrar la salida:", err);
-      toastr.error(
-        "Error al registrar la salida. Por favor, inténtalo nuevamente."
-      );
-    }
-
-    setIsExitObservationModalOpen(false); // Cierra el modal después de registrar
-  };
 
   const dataURLToFile = (dataURL, filename) => {
     const arr = dataURL.split(",");
@@ -190,7 +130,7 @@ const CameraSection = () => {
         setDetectedPlate(data.placa_detectada);
         setPlateImage(`data:image/jpeg;base64,${data.placa_imagen}`);
 
-        // Solo mostrar este mensaje si la placa está registrada y la entrada no fue registrada
+        // Si la placa está registrada
         if (data.estado === "Placa registrada") {
           setIsPlateRegistered(true);
 
@@ -198,10 +138,14 @@ const CameraSection = () => {
             toastr.success("Placa detectada y entrada registrada.");
           } else {
             toastr.info(
-              "El vehículo ya tiene una entrada registrada. Por favor, registre la salida."
+              "El vehículo ya tiene una entrada registrada. Verificando salida automáticamente..."
             );
+
+            // Llamar a la API de salida para registrar automáticamente
+            await registerExit(data.placa_detectada, userId);
           }
 
+          // Obtener detalles del vehículo
           try {
             const detailsResponse = await fetch(
               `https://CamiMujica.pythonanywhere.com/vehiculo/${data.placa_detectada}?id=${userId}`
@@ -233,6 +177,39 @@ const CameraSection = () => {
     }
   };
 
+  const registerExit = async (plate, userId) => {
+    try {
+      const response = await fetch(
+        "https://CamiMujica.pythonanywhere.com/salida",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            numero_placa: plate,
+            usuario_id: userId,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setVehicleDetails(data.vehiculo); // Actualiza los detalles del vehículo
+        toastr.success(data.message || "Salida registrada automáticamente.");
+      } else {
+        toastr.warning(
+          `Error: ${data.message || "No se pudo registrar la salida."}`
+        );
+        console.error("Respuesta de error de la API:", data);
+      }
+    } catch (err) {
+      toastr.error("Error al intentar registrar la salida.");
+      console.error("Error en el frontend:", err);
+    }
+  };
+
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -247,18 +224,13 @@ const CameraSection = () => {
     }
 
     const video = videoRef.current;
-
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
-
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
     const imageData = canvas.toDataURL("image/jpeg");
     const file = dataURLToFile(imageData, "captura.jpg");
-
     detectPlate(file); // Llama a la función que detecta la placa automáticamente
   };
 
@@ -288,14 +260,6 @@ const CameraSection = () => {
             >
               <i className="fas fa-car-side mr-2"></i>
               <span>Nuevo Registro</span>
-            </button>
-
-            <button
-              className="px-6 py-3 bg-[#167f9f] text-white rounded-lg hover:bg-[#146c83] w-full md:w-auto flex items-center justify-center"
-              onClick={() => setIsExitObservationModalOpen(true)}
-            >
-              <i className="fas fa-sign-out-alt mr-2"></i>
-              <span>Registrar Salida</span>
             </button>
           </div>
         </div>
@@ -357,7 +321,6 @@ const CameraSection = () => {
                           onChange={(e) => setEditablePlate(e.target.value)}
                           className="border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:ring focus:ring-blue-500"
                         />
-
                         <button
                           onClick={async () => {
                             setDetectedPlate(editablePlate); // Guarda los cambios en la placa
@@ -385,7 +348,6 @@ const CameraSection = () => {
                                   return;
                                 }
                               }
-
                               // La placa está registrada, actualizar estado y datos
                               const data = await response.json();
                               setVehicleDetails(data); // Actualiza los detalles del vehículo
@@ -430,7 +392,6 @@ const CameraSection = () => {
                       </div>
                     )}
                   </div>
-
                   {/* Detalles del vehículo */}
                   {vehicleDetails && (
                     <div className="mt-6 bg-white p-6 rounded-xl shadow-lg border border-gray-300 space-y-6">
@@ -453,7 +414,6 @@ const CameraSection = () => {
                             </p>
                           </div>
                         </div>
-
                         {/* Propietario */}
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
@@ -490,48 +450,9 @@ const CameraSection = () => {
               )}
               {error && <p className="text-red-500 mt-2">{error}</p>}
             </div>
-
-            {isExitObservationModalOpen && (
-              <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
-                <div className="bg-white rounded-xl p-8 w-full max-w-lg shadow-2xl transform transition-all scale-100">
-                  {/* Título del Modal */}
-                  <h3 className="text-2xl font-bold text-gray-700 mb-6 text-center">
-                    📝 Agregar Observación
-                  </h3>
-
-                  {/* Área de Texto para la Observación */}
-                  <textarea
-                    className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none"
-                    rows="5"
-                    value={exitObservation}
-                    onChange={(e) => setExitObservation(e.target.value)}
-                    placeholder="Escribe aquí tu observación..."
-                  ></textarea>
-
-                  {/* Botones */}
-                  <div className="flex justify-between items-center mt-6">
-                    <button
-                      className="px-6 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all"
-                      onClick={() => setIsExitObservationModalOpen(false)} // Cierra el modal
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-all"
-                      onClick={() =>
-                        handleExitObservationSubmit(exitObservation)
-                      } // Envía la observación
-                    >
-                      Registrar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
-
       <NewVehicleModal
         isOpen={isNewVehicleModalOpen}
         onClose={() => setIsNewVehicleModalOpen(false)}

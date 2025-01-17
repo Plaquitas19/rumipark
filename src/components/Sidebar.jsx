@@ -49,7 +49,7 @@ function Sidebar() {
             </Link>
 
             <Link
-              to="#"
+              to="/dashboard/usuarios"
               className="hover:bg-[#167f9f] p-2 rounded text-left text-xs sm:text-sm flex items-center"
             >
               <i className="fa fa-users mr-3 text-lg"></i> Usuarios

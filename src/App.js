@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import MainContent from "./components/MainContent";
 import Listado from "./components/Listadovehiculos/Listado";
+import Usuarios from "./components/Usuarios/Usuarios";
 import PricingPlans from "./client/PricingPlans";
 import Login from "./components/Login";
 import { UserProvider } from "./components/UserContext";
@@ -30,6 +31,7 @@ function App() {
                     <Routes>
                       <Route path="main" element={<MainContent />} />
                       <Route path="listado" element={<Listado />} />
+                      <Route path="usuarios" element={<Usuarios />} />
                     </Routes>
                   </div>
                 </div>
