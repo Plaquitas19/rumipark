@@ -10,6 +10,9 @@ function Usuarios() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [time, setTime] = useState(new Date().toLocaleString());
+  const [progress, setProgress] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportType, setExportType] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -50,32 +53,116 @@ function Usuarios() {
     return () => clearInterval(intervalId);
   }, [navigate]);
 
+  const simulateProgress = (callback) => {
+    let progressValue = 0;
+    setIsExporting(true);
+    const interval = setInterval(() => {
+      progressValue += 5;
+      setProgress(progressValue);
+      if (progressValue >= 100) {
+        clearInterval(interval);
+        setTimeout(() => {
+          callback();
+          setIsExporting(false);
+          setProgress(0);
+        }, 500);
+      }
+    }, 100);
+  };
+
   const exportToExcel = () => {
-    const worksheet = utils.json_to_sheet(usuarios);
-    const workbook = utils.book_new();
-    utils.book_append_sheet(workbook, worksheet, "Usuarios");
-    writeFile(workbook, `usuarios_${new Date().toLocaleDateString()}.xlsx`);
+    setExportType("Excel");
+    simulateProgress(() => {
+      const worksheet = utils.json_to_sheet(usuarios);
+      const workbook = utils.book_new();
+      utils.book_append_sheet(workbook, worksheet, "Usuarios");
+      writeFile(workbook, `usuarios_${new Date().toLocaleDateString()}.xlsx`);
+    });
   };
 
   const exportToPDF = () => {
-    const doc = new jsPDF();
-    const tableColumn = ["ID", "Placa", "Tipo Vehículo", "Propietario", "DNI"];
-    const tableRows = usuarios.map((usuario) => [
-      usuario.id,
-      usuario.numero_placa,
-      usuario.tipo_vehiculo,
-      usuario.propietario || "N/A",
-      usuario.dni,
-    ]);
+    setExportType("PDF");
+    simulateProgress(() => {
+      const doc = new jsPDF();
+      const tableColumn = [
+        "ID",
+        "Placa",
+        "Tipo Vehículo",
+        "Propietario",
+        "DNI",
+      ];
+      const tableRows = usuarios.map((usuario) => [
+        usuario.id,
+        usuario.numero_placa,
+        usuario.tipo_vehiculo,
+        usuario.propietario || "N/A",
+        usuario.dni,
+      ]);
 
-    doc.text("Listado de Usuarios Registrados", 14, 10);
-    doc.autoTable({
-      head: [tableColumn],
-      body: tableRows,
-      startY: 20,
+      doc.text("Listado de Usuarios Registrados", 14, 10);
+      doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 20,
+      });
+
+      doc.save(`usuarios_${new Date().toLocaleDateString()}.pdf`);
     });
+  };
 
-    doc.save(`usuarios_${new Date().toLocaleDateString()}.pdf`);
+  const ProgressSphere = () => {
+    const arcColor =
+      exportType === "Excel"
+        ? "rgba(0, 128, 0, 0.7)"
+        : "rgba(220, 97, 93, 0.7)"; // Verde para Excel, rojo para PDF
+    const lightColor =
+      exportType === "Excel"
+        ? "rgba(144, 238, 144, 0.5)"
+        : "rgba(255, 204, 204, 0.5)"; // Luz superior según tipo
+
+    return (
+      <div className="relative flex items-center justify-center w-32 h-32 mx-auto">
+        {/* Fondo de la esfera con efecto de vidrio */}
+        <div
+          className="absolute w-full h-full bg-white rounded-full"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(255,255,255,0.6), rgba(255,255,255,0.2))",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid rgba(255, 255, 255, 0.5)",
+            boxShadow:
+              "inset 0 4px 6px rgba(255, 255, 255, 0.7), inset 0 -4px 6px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.1)",
+          }}
+        ></div>
+
+        {/* Representación de progreso como un arco */}
+        <div
+          className="absolute w-full h-full rounded-full overflow-hidden"
+          style={{
+            background: `conic-gradient(
+              ${arcColor} ${progress * 3.6}deg, 
+              rgba(255, 255, 255, 0.1) 0deg
+            )`,
+          }}
+        ></div>
+
+        {/* Punto de luz superior para un efecto 3D */}
+        <div
+          className="absolute top-2 left-2 w-12 h-12 bg-white rounded-full"
+          style={{
+            opacity: 0.3,
+            background: lightColor,
+            boxShadow: `0 0 10px 5px ${lightColor}`,
+          }}
+        ></div>
+
+        {/* Texto del progreso */}
+        <span className="absolute text-lg font-bold text-gray-700">
+          {progress}%
+        </span>
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -120,6 +207,17 @@ function Usuarios() {
         </button>
       </div>
 
+      {isExporting && (
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl">
+            <p className="text-xl font-semibold text-gray-700 mb-4">
+              Exportando a {exportType}...
+            </p>
+            <ProgressSphere />
+          </div>
+        </div>
+      )}
+
       <div className="space-y-8">
         {usuarios.length > 0 ? (
           usuarios.map((usuario, index) => (
@@ -140,24 +238,21 @@ function Usuarios() {
               </div>
 
               <div className="grid grid-cols-2 gap-6 text-md text-gray-700">
-                <div className="flex items-center">
-                  <i className="fas fa-user-circle text-blue-500 mr-3 text-xl"></i>
-                  <span>
-                    <strong>Propietario:</strong> {usuario.propietario || "N/A"}
-                  </span>
+                <div className="flex flex-col">
+                  <span className="font-medium">Propietario:</span>
+                  <span className="text-gray-500">{usuario.propietario}</span>
                 </div>
-                <div className="flex items-center">
-                  <i className="fas fa-id-card text-blue-500 mr-3 text-xl"></i>
-                  <span>
-                    <strong>DNI:</strong> {usuario.dni}
-                  </span>
+
+                <div className="flex flex-col">
+                  <span className="font-medium">DNI:</span>
+                  <span className="text-gray-500">{usuario.dni}</span>
                 </div>
               </div>
             </div>
           ))
         ) : (
-          <div className="text-center text-gray-500 py-4">
-            No hay usuarios disponibles.
+          <div className="text-center text-xl text-gray-500">
+            No se encontraron vehículos registrados.
           </div>
         )}
       </div>

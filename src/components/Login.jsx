@@ -43,7 +43,6 @@ function Login() {
         localStorage.setItem("username", data.username);
         localStorage.setItem("id", data.id);
         localStorage.setItem("plan_id", data.plan_id);
-        toastr.success("Inicio de sesión exitoso");
         setIsLoading(true);
         setTimeout(() => {
           setIsLoading(false);
