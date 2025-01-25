@@ -8,10 +8,9 @@ import PricingPlans from "./client/PricingPlans";
 import Login from "./components/Login";
 import { UserProvider } from "./components/UserContext";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from "@stripe/react-stripe-js";
 
-const stripePromise = loadStripe("pk_test_51QiUgPFbifc8bEnLNceZ7NEwX6wFOHRNOYzPHOWVQiPwaoTdJIY43WCfaRaJG9wM3pCdHdJUYUdqIBMyZzGoS40b00x02T2tab")
+
 
 function App() {
   return (
@@ -23,7 +22,7 @@ function App() {
 
           {/* Ruta para Pricing Plans envuelta en Elements */}
           <Route path="/" element={
-            <Elements stripe={stripePromise}>
+            <Elements>
               <PricingPlans />
             </Elements>
           } />
