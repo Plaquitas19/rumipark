@@ -72,8 +72,10 @@ function MainContent() {
   }, []);
 
   return (
-    <div className="w-full p-6">
-      <header className="text-lg font-bold mb-4">
+    <div className="w-full p-5">
+      <header className="text-lg font-bold mb-4 flex justify-start ml-10">
+        {" "}
+        {/* Agregamos ml-4 aquí */}
         <span className="text-[#167f9f]">{saludo}</span>,{" "}
         <span className="text-[#167f9f]">
           {username ? username : "Usuario"}

@@ -3,12 +3,16 @@ import { Link, useNavigate } from "react-router-dom";
 import logo from "../assets/icono.png";
 import "font-awesome/css/font-awesome.min.css";
 
-function Sidebar() {
+function Sidebar({ onToggleSidebar }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  const toggleMenu = () => {
+    const newIsMenuOpen = !isMenuOpen;
+    setIsMenuOpen(newIsMenuOpen);
+    onToggleSidebar(newIsMenuOpen); // Actualiza el estado en App.js
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("auth_token"); // Eliminar el token del almacenamiento
@@ -73,6 +77,7 @@ function Sidebar() {
         className={`lg:hidden text-2xl p-2 mt-4 absolute top-4 left-4 z-20 ${
           isMenuOpen ? "text-white" : "text-[#167f9f]"
         }`}
+        style={{ top: "10px", left: "15px" }} // Asegura que el icono esté en el rango del sidebar
       >
         <i className="fa fa-bars"></i>
       </button>
