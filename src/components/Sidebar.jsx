@@ -22,11 +22,11 @@ function Sidebar({ onToggleSidebar }) {
 
   return (
     <div>
-      {/* Barra lateral */}
+      {/* Barra lateral (solo visible al abrir en móvil/tablet, fija en escritorio) */}
       <div
-        className={`fixed top-0 left-0 h-full w-[200px] sm:w-[230px] lg:w-[260px] bg-[#1da4cf] text-white flex flex-col justify-between p-4 z-10 transform ${
+        className={`fixed top-0 left-0 h-full w-[200px] sm:w-[230px] lg:w-[260px] bg-[#1da4cf] text-white flex flex-col justify-between p-4 z-50 transform ${
           isMenuOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 transition-transform duration-300`}
+        } lg:translate-x-0 lg:static lg:z-10 transition-transform duration-300`}
       >
         {/* Contenido superior */}
         <div className="flex flex-col flex-grow">
@@ -71,16 +71,22 @@ function Sidebar({ onToggleSidebar }) {
         </div>
       </div>
 
-      {/* Menú hamburguesa */}
+      {/* Menú hamburguesa (solo visible en móvil/tablet, ajustado para no cruzarse con el header) */}
       <button
         onClick={toggleMenu}
-        className={`lg:hidden text-2xl p-2 mt-4 absolute top-4 left-4 z-20 ${
-          isMenuOpen ? "text-white" : "text-[#167f9f]"
-        }`}
-        style={{ top: "10px", left: "15px" }} // Asegura que el icono esté en el rango del sidebar
+        className="lg:hidden text-2xl p-2 mt-4 absolute top-4 left-4 z-60 text-[#167f9f]"
+        style={{ top: "10px", left: "15px" }} // Ajustado para alinear con el texto del header
       >
         <i className="fa fa-bars"></i>
       </button>
+
+      {/* Fondo semitransparente cuando el menú está abierto en móvil/tablet */}
+      {isMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={toggleMenu} // Cierra el menú al hacer clic en el fondo
+        ></div>
+      )}
 
       {/* Modal de confirmación */}
       {isModalOpen && (

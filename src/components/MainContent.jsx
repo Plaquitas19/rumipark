@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { io } from "socket.io-client";
-import { useNavigate } from "react-router-dom"; // Importar useNavigate
+import { useNavigate } from "react-router-dom";
 import VehicleTable from "./VehicleTable";
 import CameraSection from "./CameraSection";
 
@@ -10,7 +10,7 @@ function MainContent() {
   const [saludo, setSaludo] = useState("");
   const [username, setUsername] = useState("");
 
-  const navigate = useNavigate(); // Iniciar el hook de navegación
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Verificar si existe un auth_token en localStorage
@@ -72,18 +72,18 @@ function MainContent() {
   }, []);
 
   return (
-    <div className="w-full p-5">
-      <header className="text-lg font-bold mb-4 flex justify-start ml-10">
-        {" "}
-        {/* Agregamos ml-4 aquí */}
-        <span className="text-[#167f9f]">{saludo}</span>,{" "}
-        <span className="text-[#167f9f]">
-          {username ? username : "Usuario"}
-        </span>
+    <div className="w-full h-full min-h-screen p-5 bg-gray-100 overflow-auto">
+      <header className="text-lg font-bold mb-4 flex items-center justify-between px-4">
+        <div className="flex items-center gap-2">
+          <span className="text-[#167f9f]">{saludo}</span>,{" "}
+          <span className="text-[#167f9f]">
+            {username ? username : "Usuario"}
+          </span>
+        </div>
       </header>
 
       <div
-        className="bg-gray-200 rounded-lg p-4 mb-6 shadow-md border-4"
+        className="bg-gray-200 rounded-lg p-4 mb-6 shadow-md border-4 w-full"
         style={{ borderColor: "#167f9f" }}
       >
         <div className="flex justify-between items-center mb-4">
@@ -101,7 +101,7 @@ function MainContent() {
         <CameraSection />
       </div>
 
-      <div className="bg-white rounded-lg p-4 shadow-md">
+      <div className="bg-white rounded-lg p-4 shadow-md w-full">
         <h2 className="text-xl font-bold text-gray-700 text-center mb-4">
           Estado de Vehículos
         </h2>

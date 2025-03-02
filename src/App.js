@@ -8,9 +8,8 @@ import Login from "./components/Login";
 import { UserProvider } from "./components/UserContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-
 function App() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [, setIsSidebarOpen] = useState(false); // Inicia cerrado en móvil
 
   const handleToggleSidebar = (isOpen) => {
     setIsSidebarOpen(isOpen);
@@ -20,27 +19,20 @@ function App() {
     <UserProvider>
       <Router>
         <Routes>
-          {/* Ruta para Login */} 
+          {/* Ruta para Login */}
           <Route path="/login" element={<Login />} />
 
           {/* Ruta por defecto ahora apunta al Login */}
-          <Route
-            path="/"
-            element={<Login />} 
-          />
+          <Route path="/" element={<Login />} />
 
           {/* Rutas protegidas */}
           <Route
             path="/dashboard/*"
             element={
               <ProtectedRoute>
-                <div className="flex h-screen bg-gray-100">
+                <div className="flex h-screen">
                   <Sidebar onToggleSidebar={handleToggleSidebar} />
-                  <div
-                    className={`transition-all duration-300 ${
-                      isSidebarOpen ? "ml-[200px] sm:ml-[230px] lg:ml-[260px]" : "ml-0"
-                    } w-full`}
-                  >
+                  <div className="w-full">
                     <Routes>
                       <Route path="main" element={<MainContent />} />
                       <Route path="listado" element={<Listado />} />
