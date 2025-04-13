@@ -4,6 +4,14 @@ import "@fortawesome/fontawesome-free/css/all.css";
 import toastr from "toastr";
 import "toastr/build/toastr.min.css";
 
+// Configurar toastr para que las notificaciones duren 30 segundos
+toastr.options = {
+  timeOut: 30000, // 30 segundos
+  extendedTimeOut: 0,
+  positionClass: "toast-top-right",
+  preventDuplicates: true,
+};
+
 const CameraSection = () => {
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -20,15 +28,19 @@ const CameraSection = () => {
   const [hasPendingEntry, setHasPendingEntry] = useState(false);
   const [lastNotification, setLastNotification] = useState("");
   const [lastSpokenMessage, setLastSpokenMessage] = useState("");
+  const [hasNotifiedPending, setHasNotifiedPending] = useState(false); // Nuevo estado para controlar notificación de espera
 
   const speak = (message) => {
     if (lastSpokenMessage === message) return;
 
     const utterance = new SpeechSynthesisUtterance(message);
-    utterance.lang = "es-ES";
-    utterance.volume = 1;
-    utterance.rate = 1;
-    utterance.pitch = 1;
+    utterance.lang = "es-ES"; // Idioma español
+    utterance.volume = 1; // Volumen (0 a 1)
+    utterance.rate = 1; // Velocidad (0.1 a 10)
+    utterance.pitch = 1; // Tono (0 a 2)
+
+    // Asegurarse de que no haya otros mensajes en cola
+    window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
     setLastSpokenMessage(message);
   };
@@ -110,6 +122,7 @@ const CameraSection = () => {
       videoRef.current.srcObject = null;
       setIsCameraActive(false);
       setHasPendingEntry(false);
+      setHasNotifiedPending(false);
       setLastNotification("");
       setLastSpokenMessage("");
     }
@@ -150,13 +163,20 @@ const CameraSection = () => {
           setIsPlateRegistered(true);
 
           if (!data.entrada_registrada) {
-            // Registrar una entrada
             toastr.success("Placa detectada y entrada registrada.");
             speak("Placa detectada y entrada registrada");
             setLastNotification("Placa detectada y entrada registrada.");
-            setHasPendingEntry(true); // Marcar que hay una entrada pendiente
-          } else if (hasPendingEntry) {
-            // Solo intentar registrar salida si ya se detectó una entrada pendiente
+            setHasPendingEntry(true);
+            setHasNotifiedPending(false); // Resetear para permitir notificación de espera
+          } else if (hasPendingEntry && !hasNotifiedPending) {
+            // Solo notificar una vez durante el período de espera de 3 minutos
+            toastr.info("Aún no han pasado los 3 minutos. Por favor, espera.");
+            speak("Aún no han pasado los 3 minutos. Por favor, espera");
+            setLastNotification("Aún no han pasado los 3 minutos. Por favor, espera.");
+            setHasNotifiedPending(true); // Evitar repetir esta notificación
+            await registerExit(data.placa_detectada, userId);
+          } else if (hasPendingEntry && hasNotifiedPending) {
+            // Silenciosamente intentar registrar la salida sin notificar
             await registerExit(data.placa_detectada, userId);
           }
 
@@ -239,7 +259,8 @@ const CameraSection = () => {
         toastr.success(data.message || "Salida registrada exitosamente.");
         speak("Salida registrada exitosamente");
         setLastNotification(data.message || "Salida registrada exitosamente.");
-        setHasPendingEntry(false); // Resetear después de registrar la salida
+        setHasPendingEntry(false);
+        setHasNotifiedPending(false);
       } else {
         const message = `Error: ${data.message || "No se pudo registrar la salida."}`;
         if (lastNotification !== message) {
