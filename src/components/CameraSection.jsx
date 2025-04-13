@@ -4,14 +4,6 @@ import "@fortawesome/fontawesome-free/css/all.css";
 import toastr from "toastr";
 import "toastr/build/toastr.min.css";
 
-// Configurar toastr para que las notificaciones duren 30 segundos
-toastr.options = {
-  timeOut: 30000, // 30 segundos
-  extendedTimeOut: 0,
-  positionClass: "toast-top-right",
-  preventDuplicates: true,
-};
-
 const CameraSection = () => {
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -27,10 +19,11 @@ const CameraSection = () => {
   const [editablePlate, setEditablePlate] = useState("");
   const [hasPendingEntry, setHasPendingEntry] = useState(false);
   const [lastNotification, setLastNotification] = useState("");
-  const [lastSpokenMessage, setLastSpokenMessage] = useState("");
-  const [hasNotifiedPending, setHasNotifiedPending] = useState(false); // Nuevo estado para controlar notificación de espera
+  const [lastSpokenMessage, setLastSpokenMessage] = useState(""); // Nuevo estado para mensajes hablados
 
+  // Función para reproducir mensajes de voz
   const speak = (message) => {
+    // Evitar repetir el mismo mensaje hablado
     if (lastSpokenMessage === message) return;
 
     const utterance = new SpeechSynthesisUtterance(message);
@@ -38,11 +31,8 @@ const CameraSection = () => {
     utterance.volume = 1; // Volumen (0 a 1)
     utterance.rate = 1; // Velocidad (0.1 a 10)
     utterance.pitch = 1; // Tono (0 a 2)
-
-    // Asegurarse de que no haya otros mensajes en cola
-    window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
-    setLastSpokenMessage(message);
+    setLastSpokenMessage(message); // Actualizar el último mensaje hablado
   };
 
   useEffect(() => {
@@ -56,6 +46,7 @@ const CameraSection = () => {
     }
 
     return () => clearInterval(detectionInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCameraActive, hasPendingEntry]);
 
   const dataURLToFile = (dataURL, filename) => {
@@ -122,9 +113,8 @@ const CameraSection = () => {
       videoRef.current.srcObject = null;
       setIsCameraActive(false);
       setHasPendingEntry(false);
-      setHasNotifiedPending(false);
       setLastNotification("");
-      setLastSpokenMessage("");
+      setLastSpokenMessage(""); // Resetear mensajes hablados
     }
   };
 
@@ -166,18 +156,21 @@ const CameraSection = () => {
             toastr.success("Placa detectada y entrada registrada.");
             speak("Placa detectada y entrada registrada");
             setLastNotification("Placa detectada y entrada registrada.");
-            setHasPendingEntry(true);
-            setHasNotifiedPending(false); // Resetear para permitir notificación de espera
-          } else if (hasPendingEntry && !hasNotifiedPending) {
-            // Solo notificar una vez durante el período de espera de 3 minutos
-            toastr.info("Aún no han pasado los 3 minutos. Por favor, espera.");
-            speak("Aún no han pasado los 3 minutos. Por favor, espera");
-            setLastNotification("Aún no han pasado los 3 minutos. Por favor, espera.");
-            setHasNotifiedPending(true); // Evitar repetir esta notificación
-            await registerExit(data.placa_detectada, userId);
-          } else if (hasPendingEntry && hasNotifiedPending) {
-            // Silenciosamente intentar registrar la salida sin notificar
-            await registerExit(data.placa_detectada, userId);
+            setHasPendingEntry(false);
+          } else {
+            if (!hasPendingEntry) {
+              toastr.info(
+                "El vehículo ya tiene una entrada registrada. Verificando salida automáticamente..."
+              );
+              speak(
+                "El vehículo ya tiene una entrada registrada. Verificando salida automáticamente"
+              );
+              setLastNotification(
+                "El vehículo ya tiene una entrada registrada. Verificando salida automáticamente..."
+              );
+              setHasPendingEntry(true);
+              await registerExit(data.placa_detectada, userId);
+            }
           }
 
           try {
@@ -190,18 +183,30 @@ const CameraSection = () => {
               setVehicleDetails(detailsData);
             } else {
               setVehicleDetails(null);
-              if (lastNotification !== "No se pudieron obtener los detalles del vehículo.") {
-                toastr.error("No se pudieron obtener los detalles del vehículo.");
+              if (
+                lastNotification !==
+                "No se pudieron obtener los detalles del vehículo."
+              ) {
+                toastr.error(
+                  "No se pudieron obtener los detalles del vehículo."
+                );
                 speak("No se pudieron obtener los detalles del vehículo");
-                setLastNotification("No se pudieron obtener los detalles del vehículo.");
+                setLastNotification(
+                  "No se pudieron obtener los detalles del vehículo."
+                );
               }
             }
           } catch (err) {
             console.error("Error al obtener detalles del vehículo:", err);
-            if (lastNotification !== "No se pudieron obtener los detalles del vehículo.") {
+            if (
+              lastNotification !==
+              "No se pudieron obtener los detalles del vehículo."
+            ) {
               toastr.error("No se pudieron obtener los detalles del vehículo.");
               speak("No se pudieron obtener los detalles del vehículo");
-              setLastNotification("No se pudieron obtener los detalles del vehículo.");
+              setLastNotification(
+                "No se pudieron obtener los detalles del vehículo."
+              );
             }
           }
         } else if (data.estado === "Placa no registrada") {
@@ -213,7 +218,9 @@ const CameraSection = () => {
             toastr.warning(
               "Placa no registrada. Por favor, registre el vehículo para procesar la entrada."
             );
-            speak("Placa no registrada. Por favor, registre el vehículo para procesar la entrada");
+            speak(
+              "Placa no registrada. Por favor, registre el vehículo para procesar la entrada"
+            );
             setLastNotification(
               "Placa no registrada. Por favor, registre el vehículo para procesar la entrada."
             );
@@ -260,9 +267,10 @@ const CameraSection = () => {
         speak("Salida registrada exitosamente");
         setLastNotification(data.message || "Salida registrada exitosamente.");
         setHasPendingEntry(false);
-        setHasNotifiedPending(false);
       } else {
-        const message = `Error: ${data.message || "No se pudo registrar la salida."}`;
+        const message = `Error: ${
+          data.message || "No se pudo registrar la salida."
+        }`;
         if (lastNotification !== message) {
           toastr.warning(message);
           speak(message);
@@ -289,10 +297,15 @@ const CameraSection = () => {
 
   const detectFromCamera = async () => {
     if (!isCameraActive || !videoRef.current) {
-      if (lastNotification !== "Debes activar la cámara para poder detectar la placa.") {
+      if (
+        lastNotification !==
+        "Debes activar la cámara para poder detectar la placa."
+      ) {
         toastr.error("Debes activar la cámara para poder detectar la placa.");
         speak("Debes activar la cámara para poder detectar la placa");
-        setLastNotification("Debes activar la cámara para poder detectar la placa.");
+        setLastNotification(
+          "Debes activar la cámara para poder detectar la placa."
+        );
       }
       return;
     }
@@ -410,7 +423,9 @@ const CameraSection = () => {
                                   toastr.error(
                                     "La placa corregida no está registrada. Por favor, regístrala primero."
                                   );
-                                  speak("La placa corregida no está registrada. Por favor, regístrala primero");
+                                  speak(
+                                    "La placa corregida no está registrada. Por favor, regístrala primero"
+                                  );
                                   setLastNotification(
                                     "La placa corregida no está registrada. Por favor, regístrala primero."
                                   );
@@ -420,7 +435,9 @@ const CameraSection = () => {
                                   toastr.error(
                                     "Error al verificar el estado de la placa."
                                   );
-                                  speak("Error al verificar el estado de la placa");
+                                  speak(
+                                    "Error al verificar el estado de la placa"
+                                  );
                                   setLastNotification(
                                     "Error al verificar el estado de la placa."
                                   );
