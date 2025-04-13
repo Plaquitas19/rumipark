@@ -44,7 +44,6 @@ const CameraSection = () => {
     }
 
     return () => clearInterval(detectionInterval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCameraActive, hasPendingEntry]);
 
   const dataURLToFile = (dataURL, filename) => {
@@ -151,13 +150,13 @@ const CameraSection = () => {
           setIsPlateRegistered(true);
 
           if (!data.entrada_registrada) {
+            // Registrar una entrada
             toastr.success("Placa detectada y entrada registrada.");
             speak("Placa detectada y entrada registrada");
             setLastNotification("Placa detectada y entrada registrada.");
-            setHasPendingEntry(false);
-          } else {
-            // No mostrar la notificación intermedia, solo proceder a registrar la salida
-            setHasPendingEntry(true);
+            setHasPendingEntry(true); // Marcar que hay una entrada pendiente
+          } else if (hasPendingEntry) {
+            // Solo intentar registrar salida si ya se detectó una entrada pendiente
             await registerExit(data.placa_detectada, userId);
           }
 
@@ -171,30 +170,18 @@ const CameraSection = () => {
               setVehicleDetails(detailsData);
             } else {
               setVehicleDetails(null);
-              if (
-                lastNotification !==
-                "No se pudieron obtener los detalles del vehículo."
-              ) {
-                toastr.error(
-                  "No se pudieron obtener los detalles del vehículo."
-                );
+              if (lastNotification !== "No se pudieron obtener los detalles del vehículo.") {
+                toastr.error("No se pudieron obtener los detalles del vehículo.");
                 speak("No se pudieron obtener los detalles del vehículo");
-                setLastNotification(
-                  "No se pudieron obtener los detalles del vehículo."
-                );
+                setLastNotification("No se pudieron obtener los detalles del vehículo.");
               }
             }
           } catch (err) {
             console.error("Error al obtener detalles del vehículo:", err);
-            if (
-              lastNotification !==
-              "No se pudieron obtener los detalles del vehículo."
-            ) {
+            if (lastNotification !== "No se pudieron obtener los detalles del vehículo.") {
               toastr.error("No se pudieron obtener los detalles del vehículo.");
               speak("No se pudieron obtener los detalles del vehículo");
-              setLastNotification(
-                "No se pudieron obtener los detalles del vehículo."
-              );
+              setLastNotification("No se pudieron obtener los detalles del vehículo.");
             }
           }
         } else if (data.estado === "Placa no registrada") {
@@ -206,9 +193,7 @@ const CameraSection = () => {
             toastr.warning(
               "Placa no registrada. Por favor, registre el vehículo para procesar la entrada."
             );
-            speak(
-              "Placa no registrada. Por favor, registre el vehículo para procesar la entrada"
-            );
+            speak("Placa no registrada. Por favor, registre el vehículo para procesar la entrada");
             setLastNotification(
               "Placa no registrada. Por favor, registre el vehículo para procesar la entrada."
             );
@@ -254,11 +239,9 @@ const CameraSection = () => {
         toastr.success(data.message || "Salida registrada exitosamente.");
         speak("Salida registrada exitosamente");
         setLastNotification(data.message || "Salida registrada exitosamente.");
-        setHasPendingEntry(false);
+        setHasPendingEntry(false); // Resetear después de registrar la salida
       } else {
-        const message = `Error: ${
-          data.message || "No se pudo registrar la salida."
-        }`;
+        const message = `Error: ${data.message || "No se pudo registrar la salida."}`;
         if (lastNotification !== message) {
           toastr.warning(message);
           speak(message);
@@ -285,15 +268,10 @@ const CameraSection = () => {
 
   const detectFromCamera = async () => {
     if (!isCameraActive || !videoRef.current) {
-      if (
-        lastNotification !==
-        "Debes activar la cámara para poder detectar la placa."
-      ) {
+      if (lastNotification !== "Debes activar la cámara para poder detectar la placa.") {
         toastr.error("Debes activar la cámara para poder detectar la placa.");
         speak("Debes activar la cámara para poder detectar la placa");
-        setLastNotification(
-          "Debes activar la cámara para poder detectar la placa."
-        );
+        setLastNotification("Debes activar la cámara para poder detectar la placa.");
       }
       return;
     }
@@ -411,9 +389,7 @@ const CameraSection = () => {
                                   toastr.error(
                                     "La placa corregida no está registrada. Por favor, regístrala primero."
                                   );
-                                  speak(
-                                    "La placa corregida no está registrada. Por favor, regístrala primero"
-                                  );
+                                  speak("La placa corregida no está registrada. Por favor, regístrala primero");
                                   setLastNotification(
                                     "La placa corregida no está registrada. Por favor, regístrala primero."
                                   );
@@ -423,9 +399,7 @@ const CameraSection = () => {
                                   toastr.error(
                                     "Error al verificar el estado de la placa."
                                   );
-                                  speak(
-                                    "Error al verificar el estado de la placa"
-                                  );
+                                  speak("Error al verificar el estado de la placa");
                                   setLastNotification(
                                     "Error al verificar el estado de la placa."
                                   );
