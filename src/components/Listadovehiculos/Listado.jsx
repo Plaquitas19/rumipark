@@ -5,7 +5,7 @@ import { utils, writeFile } from "xlsx";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css"; // Importar los estilos de Toastify
+import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/icono.png";
 
 function Listado() {
@@ -44,7 +44,7 @@ function Listado() {
         );
         const registros = response.data.registros || [];
         setRecords(registros);
-        setFilteredRecords(registros); // Sincroniza filteredRecords con records
+        setFilteredRecords(registros);
         setIsLoading(false);
       } catch (error) {
         console.error("Error al obtener los registros:", error);
@@ -87,16 +87,11 @@ function Listado() {
 
   const exportToPDF = () => {
     const doc = new jsPDF();
-
-    // Agregar el logo
     doc.addImage(logo, "PNG", 10, 10, 30, 30);
-
-    // Título del documento
     doc.setFontSize(16);
     doc.setTextColor("#167f9f");
     doc.text("Listado de Entrada y Salida de Vehículos", 50, 25);
 
-    // Tabla y demás configuraciones
     const tableColumn = [
       "Placa",
       "Estado",
@@ -169,12 +164,7 @@ function Listado() {
       const userId = localStorage.getItem("id");
       if (!userId) {
         toast.error(
-          "El ID del usuario no fue encontrado. Por favor, inicia sesión.",
-          {
-            position: "top-center",
-            autoClose: 3000,
-            theme: "colored",
-          }
+          "El ID del usuario no fue encontrado. Por favor, inicia sesión."
         );
         return;
       }
@@ -185,11 +175,7 @@ function Listado() {
           "Error: selectedRecord no contiene un id válido:",
           selectedRecord
         );
-        toast.error("No se encontró el registro seleccionado.", {
-          position: "top-center",
-          autoClose: 3000,
-          theme: "colored",
-        });
+        toast.error("No se encontró el registro seleccionado.");
         return;
       }
 
@@ -212,14 +198,18 @@ function Listado() {
       );
 
       if (response.status === 200) {
-        toast.success("Observación registrada correctamente.", {
-          position: "top-center",
-          autoClose: 3000,
-          theme: "colored",
-        });
+        toast.success("Observación registrada correctamente.");
         setIsModalOpen(false);
+        // Update both records and filteredRecords to reflect the change in real-time
         setRecords((prevRecords) =>
           prevRecords.map((record) =>
+            record.id === registroId
+              ? { ...record, observacion: observacion }
+              : record
+          )
+        );
+        setFilteredRecords((prevFiltered) =>
+          prevFiltered.map((record) =>
             record.id === registroId
               ? { ...record, observacion: observacion }
               : record
@@ -228,23 +218,13 @@ function Listado() {
       } else {
         toast.error(
           response.data.message ||
-            "Ocurrió un error al registrar la observación.",
-          {
-            position: "top-center",
-            autoClose: 3000,
-            theme: "colored",
-          }
+            "Ocurrió un error al registrar la observación."
         );
       }
     } catch (error) {
       console.error("Error al guardar la observación:", error);
       toast.error(
-        "Ocurrió un error. Verifica tu conexión o intenta nuevamente.",
-        {
-          position: "top-center",
-          autoClose: 3000,
-          theme: "colored",
-        }
+        "Ocurrió un error. Verifica tu conexión o intenta nuevamente."
       );
     }
   };
@@ -258,138 +238,137 @@ function Listado() {
   }
 
   return (
-    <div className="bg-white shadow-xl rounded-lg p-6 mx-auto max-w-full md:max-w-7xl">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-3xl font-bold text-[#167f9f] leading-tight flex items-center">
-          <i className="fas fa-list-alt mr-3 text-[#167f9f]"></i>
-          Listado de Entrada y Salida de Vehículos
-        </h2>
+    <div className="w-full h-full min-h-screen p-5 bg-gray-100 overflow-auto">
+      <div className="bg-white shadow-xl rounded-lg p-6 mx-auto max-w-full md:max-w-7xl">
+        <div className="flex flex-col items-center mb-8 md:flex-row md:justify-between">
+          <h2 className="text-3xl font-bold text-[#167f9f] leading-tight flex items-center text-center">
+            <i className="fas fa-list-alt mr-3 text-[#167f9f]"></i>
+            Listado de Entrada y Salida de Vehículos
+          </h2>
 
-        <div className="text-xl font-semibold text-gray-500 flex items-center">
-          <i className="fas fa-clock mr-2 text-green-600"></i>
-          {time}
-        </div>
-      </div>
-
-      <div className="relative flex items-center group">
-        {/* Icono de búsqueda */}
-        <div className="w-10 h-10 bg-[#167f9f] text-white rounded-full flex items-center justify-center shadow-md cursor-pointer group-hover:bg-white group-hover:text-[#167f9f] group-hover:ring-4 group-hover:ring-[#167f9f] transition-all duration-300 ease-in-out">
-          <i className="fas fa-search text-lg"></i>
-        </div>
-
-        {/* Input de búsqueda */}
-        <input
-          type="text"
-          placeholder="Buscar Placa..."
-          value={searchQuery}
-          onChange={handleSearch}
-          className="ml-3 w-0 opacity-0 group-hover:w-64 group-hover:opacity-100 transition-all duration-300 ease-in-out pl-4 pr-4 py-2 text-sm md:text-base text-gray-700 placeholder-gray-400 bg-white border border-[#167f9f] rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-[#167f9f]"
-        />
-      </div>
-
-      <div className="flex justify-end gap-4 mb-6">
-        <button
-          onClick={exportToExcel}
-          className="px-6 py-3 border-2 border-[#2a6f3d] bg-[#2a6f3d] bg-opacity-20 text-[#2a6f3d] rounded-xl shadow-md hover:bg-[#276a37] hover:bg-opacity-80 hover:text-white focus:outline-none transition duration-200"
-        >
-          <i className="fas fa-file-excel mr-2"></i> Exportar a Excel
-        </button>
-        <button
-          onClick={exportToPDF}
-          className="px-6 py-3 border-2 border-[#e03c31] bg-[#e03c31] bg-opacity-20 text-[#e03c31] rounded-xl shadow-md hover:bg-[#cc3628] hover:bg-opacity-80 hover:text-white focus:outline-none transition duration-200"
-        >
-          <i className="fas fa-file-pdf mr-2"></i> Exportar a PDF
-        </button>
-      </div>
-
-      <div className="space-y-6">
-        {filteredRecords.length > 0 ? (
-          filteredRecords.map((record, index) => (
-            <div
-              key={index}
-              className="bg-blue-50 p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <i className="fas fa-car-side text-blue-500 text-xl mr-2"></i>
-                  <span className="text-lg font-bold text-blue-800">
-                    {record.numero_placa}
-                  </span>
-                </div>
-                <div
-                  className={`inline-block px-6 py-3 rounded-md text-base font-medium ${
-                    record.estado === "Entrada"
-                      ? "bg-green-200 text-green-800"
-                      : "bg-orange-200 text-orange-800"
-                  }`}
-                >
-                  <i
-                    className={`mr-2 ${
-                      record.estado === "Entrada"
-                        ? "fas fa-arrow-circle-down"
-                        : "fas fa-arrow-circle-up"
-                    }`}
-                  ></i>
-                  {record.estado}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
-                <div className="flex items-center">
-                  <i className="fas fa-calendar-day text-blue-500 mr-2"></i>
-                  <span>
-                    <strong>Fecha Entrada:</strong> {record.fecha_entrada}
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <i className="fas fa-clock text-green-500 mr-2"></i>
-                  <span>
-                    <strong>Hora Entrada:</strong> {record.hora_entrada}
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <i className="fas fa-calendar-check text-blue-500 mr-2"></i>
-                  <span>
-                    <strong>Fecha Salida:</strong>{" "}
-                    {record.fecha_salida || "No registrada"}
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <i className="fas fa-clock text-green-500 mr-2"></i>
-                  <span>
-                    <strong>Hora Salida:</strong>{" "}
-                    {record.hora_salida || "No registrada"}
-                  </span>
-                </div>
-                <div className="col-span-2 flex items-center">
-                  <i className="fas fa-comment-alt text-gray-500 mr-2"></i>
-                  <span>
-                    <strong>Observación:</strong>{" "}
-                    {record.observacion || "Sin observación"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-4 flex justify-end gap-4">
-                <button
-                  onClick={() => handleSelectRecord(record)} // Pasa el registro completo
-                  className="px-4 py-2 border-2 border-[#6a97c1] bg-white text-[#6a97c1] rounded-md shadow-md hover:bg-[#6a97c1] hover:text-white transition duration-200"
-                >
-                  Seleccionar
-                </button>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="text-center text-gray-500 py-4">
-            No hay registros disponibles.
+          <div className="text-xl font-semibold text-gray-500 flex items-center mt-2 md:mt-0">
+            <i className="fas fa-clock mr-2 text-green-600"></i>
+            {time}
           </div>
-        )}
+        </div>
+
+        <div className="relative flex items-center mb-6">
+          <div className="w-10 h-10 bg-[#167f9f] text-white rounded-full flex items-center justify-center shadow-md">
+            <i className="fas fa-search text-lg"></i>
+          </div>
+          <input
+            type="text"
+            placeholder="Buscar Placa..."
+            value={searchQuery}
+            onChange={handleSearch}
+            className="ml-3 w-full sm:w-64 pl-4 pr-4 py-2 text-sm md:text-base text-gray-700 placeholder-gray-400 bg-white border border-[#167f9f] rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-[#167f9f]"
+          />
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-end gap-4 mb-6">
+          <button
+            onClick={exportToExcel}
+            className="px-6 py-3 border-2 border-[#2a6f3d] bg-[#2a6f3d] bg-opacity-20 text-[#2a6f3d] rounded-xl shadow-md hover:bg-[#276a37] hover:bg-opacity-80 hover:text-white focus:outline-none transition duration-200"
+          >
+            <i className="fas fa-file-excel mr-2"></i> Exportar a Excel
+          </button>
+          <button
+            onClick={exportToPDF}
+            className="px-6 py-3 border-2 border-[#e03c31] bg-[#e03c31] bg-opacity-20 text-[#e03c31] rounded-xl shadow-md hover:bg-[#cc3628] hover:bg-opacity-80 hover:text-white focus:outline-none transition duration-200"
+          >
+            <i className="fas fa-file-pdf mr-2"></i> Exportar a PDF
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          {filteredRecords.length > 0 ? (
+            filteredRecords.map((record, index) => (
+              <div
+                key={index}
+                className="bg-blue-50 p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
+              >
+                <div className="flex flex-col sm:flex-row items-center justify-between mb-4">
+                  <div className="flex items-center mb-2 sm:mb-0">
+                    <i className="fas fa-car-side text-blue-500 text-xl mr-2"></i>
+                    <span className="text-lg font-bold text-blue-800">
+                      {record.numero_placa}
+                    </span>
+                  </div>
+                  <div
+                    className={`inline-block px-6 py-3 rounded-md text-base font-medium ${
+                      record.estado === "Entrada"
+                        ? "bg-green-200 text-green-800"
+                        : "bg-orange-200 text-orange-800"
+                    }`}
+                  >
+                    <i
+                      className={`mr-2 ${
+                        record.estado === "Entrada"
+                          ? "fas fa-arrow-circle-down"
+                          : "fas fa-arrow-circle-up"
+                      }`}
+                    ></i>
+                    {record.estado}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
+                  <div className="flex items-center">
+                    <i className="fas fa-calendar-day text-blue-500 mr-2"></i>
+                    <span>
+                      <strong>Fecha Entrada:</strong> {record.fecha_entrada}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <i className="fas fa-clock text-green-500 mr-2"></i>
+                    <span>
+                      <strong>Hora Entrada:</strong> {record.hora_entrada}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <i className="fas fa-calendar-check text-blue-500 mr-2"></i>
+                    <span>
+                      <strong>Fecha Salida:</strong>{" "}
+                      {record.fecha_salida || "No registrada"}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <i className="fas fa-clock text-green-500 mr-2"></i>
+                    <span>
+                      <strong>Hora Salida:</strong>{" "}
+                      {record.hora_salida || "No registrada"}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <i className="fas fa-comment-alt text-gray-500 mr-2"></i>
+                    <span>
+                      <strong>Observación:</strong>{" "}
+                      {record.observacion || "Sin observación"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex justify-end gap-4">
+                  <button
+                    onClick={() => handleSelectRecord(record)}
+                    className="px-4 py-2 border-2 border-[#6a97c1] bg-white text-[#6a97c1] rounded-md shadow-md hover:bg-[#6a97c1] hover:text-white transition duration-200"
+                  >
+                    Seleccionar
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-gray-500 py-4">
+              No hay registros disponibles.
+            </div>
+          )}
+        </div>
       </div>
 
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-700 bg-opacity-50 z-50">
-          <div className="bg-white p-8 rounded-lg shadow-lg w-2/3 sm:w-1/2 md:w-1/3 border-4 border-[#6a97c1]">
+          <div className="bg-white p-8 rounded-lg shadow-lg w-11/12 sm:w-1/2 md:w-1/3 border-4 border-[#6a97c1]">
             <h3 className="text-2xl font-semibold text-[#167f9f] mb-4">
               Detalles del Registro
             </h3>
