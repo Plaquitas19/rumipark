@@ -153,12 +153,13 @@ const CameraSection = () => {
           setIsPlateRegistered(true);
 
           if (!data.entrada_registrada) {
-            // Verificar si han pasado al menos 3 minutos desde la última salida
+            // Verificar si han pasado al menos 2 minutos desde la última salida
             if (lastExitTime) {
               const currentTime = new Date();
               const timeDiff = (currentTime - lastExitTime) / 1000 / 60;
-              if (timeDiff < 3) {
-                const remainingTime = Math.ceil((3 - timeDiff) * 60);
+              console.log(`Tiempo transcurrido desde la salida: ${timeDiff} minutos`);
+              if (timeDiff < 2) {
+                const remainingTime = Math.ceil((2 - timeDiff) * 60);
                 if (
                   lastNotification !==
                   `Debes esperar ${remainingTime} segundos más para registrar una nueva entrada.`
@@ -177,38 +178,17 @@ const CameraSection = () => {
               }
             }
 
-            // Registrar la entrada si han pasado 3 minutos desde la última salida
+            // Registrar la entrada si han pasado 2 minutos desde la última salida
             toastr.success("Placa detectada y entrada registrada.");
             speak("Placa detectada y entrada registrada");
             setLastNotification("Placa detectada y entrada registrada.");
             setHasPendingEntry(false);
             setLastEntryTime(new Date());
+            setLastExitTime(null); // Resetear lastExitTime para permitir futuras salidas
           } else {
-            // Verificar si han pasado al menos 3 minutos desde la entrada
-            if (lastEntryTime) {
-              const currentTime = new Date();
-              const timeDiff = (currentTime - lastEntryTime) / 1000 / 60;
-              if (timeDiff < 3) {
-                const remainingTime = Math.ceil((3 - timeDiff) * 60);
-                if (
-                  lastNotification !==
-                  `Debes esperar ${remainingTime} segundos más para registrar la salida.`
-                ) {
-                  toastr.warning(
-                    `Debes esperar ${remainingTime} segundos más para registrar la salida.`
-                  );
-                  speak(
-                    `Debes esperar ${remainingTime} segundos más para registrar la salida`
-                  );
-                  setLastNotification(
-                    `Debes esperar ${remainingTime} segundos más para registrar la salida.`
-                  );
-                }
-              } else {
-                // Si han pasado 3 minutos o más, intentar registrar la salida
-                await registerExit(data.placa_detectada, userId);
-              }
-            }
+            // Si hay una entrada registrada, intentar registrar la salida
+            console.log("Intentando registrar la salida...");
+            await registerExit(data.placa_detectada, userId);
             setHasPendingEntry(true);
           }
 
@@ -283,29 +263,7 @@ const CameraSection = () => {
   };
 
   const registerExit = async (plate, userId) => {
-    if (lastEntryTime) {
-      const currentTime = new Date();
-      const timeDiff = (currentTime - lastEntryTime) / 1000 / 60;
-      if (timeDiff < 3) {
-        const remainingTime = Math.ceil((3 - timeDiff) * 60);
-        if (
-          lastNotification !==
-          `Debes esperar ${remainingTime} segundos más para registrar la salida.`
-        ) {
-          toastr.warning(
-            `Debes esperar ${remainingTime} segundos más para registrar la salida.`
-          );
-          speak(
-            `Debes esperar ${remainingTime} segundos más para registrar la salida`
-          );
-          setLastNotification(
-            `Debes esperar ${remainingTime} segundos más para registrar la salida.`
-          );
-        }
-        return;
-      }
-    }
-
+    console.log(`Registrando salida para la placa: ${plate}, usuario: ${userId}`);
     try {
       const response = await fetch(
         "https://CamiMujica.pythonanywhere.com/salida",
@@ -321,16 +279,51 @@ const CameraSection = () => {
         }
       );
 
+      console.log("Respuesta del servidor:", response);
+
       const data = await response.json();
+      console.log("Datos de la respuesta:", data);
 
       if (response.ok) {
-        setVehicleDetails(data.vehiculo);
-        toastr.success("Salida registrada exitosamente.");
-        speak("Salida registrada exitosamente");
-        setLastNotification("Salida registrada exitosamente.");
-        setHasPendingEntry(false);
-        setLastEntryTime(null);
-        setLastExitTime(new Date());
+        // Verificar el mensaje devuelto por el backend
+        if (data.message === "Salida registrada exitosamente.") {
+          setVehicleDetails(data.vehiculo);
+          toastr.success("Salida registrada exitosamente.");
+          speak("Salida registrada exitosamente");
+          setLastNotification("Salida registrada exitosamente.");
+          setHasPendingEntry(false);
+          setLastEntryTime(null);
+          setLastExitTime(new Date()); // Registrar la hora de la salida
+        } else if (
+          data.message ===
+          "El vehículo fue detectado antes del límite de 3 minutos. Esperando nueva detección."
+        ) {
+          const lastEntry = lastEntryTime || new Date();
+          const currentTime = new Date();
+          const timeDiff = (currentTime - lastEntry) / 1000 / 60;
+          const remainingTime = Math.ceil((3 - timeDiff) * 60);
+          if (
+            lastNotification !==
+            `Debes esperar ${remainingTime} segundos más para registrar la salida.`
+          ) {
+            toastr.warning(
+              `Debes esperar ${remainingTime} segundos más para registrar la salida.`
+            );
+            speak(
+              `Debes esperar ${remainingTime} segundos más para registrar la salida`
+            );
+            setLastNotification(
+              `Debes esperar ${remainingTime} segundos más para registrar la salida.`
+            );
+          }
+        } else {
+          // Manejar otros mensajes de error del backend
+          if (lastNotification !== data.message) {
+            toastr.warning(data.message);
+            speak(data.message);
+            setLastNotification(data.message);
+          }
+        }
       } else {
         const message = `Error: ${
           data.message || "No se pudo registrar la salida."
