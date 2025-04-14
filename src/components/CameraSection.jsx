@@ -19,20 +19,17 @@ const CameraSection = () => {
   const [editablePlate, setEditablePlate] = useState("");
   const [hasPendingEntry, setHasPendingEntry] = useState(false);
   const [lastNotification, setLastNotification] = useState("");
-  const [lastSpokenMessage, setLastSpokenMessage] = useState(""); // Nuevo estado para mensajes hablados
+  const [lastSpokenMessage, setLastSpokenMessage] = useState("");
 
-  // Función para reproducir mensajes de voz
   const speak = (message) => {
-    // Evitar repetir el mismo mensaje hablado
     if (lastSpokenMessage === message) return;
-
     const utterance = new SpeechSynthesisUtterance(message);
-    utterance.lang = "es-ES"; // Idioma español
-    utterance.volume = 1; // Volumen (0 a 1)
-    utterance.rate = 1; // Velocidad (0.1 a 10)
-    utterance.pitch = 1; // Tono (0 a 2)
+    utterance.lang = "es-ES";
+    utterance.volume = 1;
+    utterance.rate = 1;
+    utterance.pitch = 1;
     window.speechSynthesis.speak(utterance);
-    setLastSpokenMessage(message); // Actualizar el último mensaje hablado
+    setLastSpokenMessage(message);
   };
 
   useEffect(() => {
@@ -114,7 +111,7 @@ const CameraSection = () => {
       setIsCameraActive(false);
       setHasPendingEntry(false);
       setLastNotification("");
-      setLastSpokenMessage(""); // Resetear mensajes hablados
+      setLastSpokenMessage("");
     }
   };
 
@@ -158,19 +155,9 @@ const CameraSection = () => {
             setLastNotification("Placa detectada y entrada registrada.");
             setHasPendingEntry(false);
           } else {
-            if (!hasPendingEntry) {
-              toastr.info(
-                "El vehículo ya tiene una entrada registrada. Verificando salida automáticamente..."
-              );
-              speak(
-                "El vehículo ya tiene una entrada registrada. Verificando salida automáticamente"
-              );
-              setLastNotification(
-                "El vehículo ya tiene una entrada registrada. Verificando salida automáticamente..."
-              );
-              setHasPendingEntry(true);
-              await registerExit(data.placa_detectada, userId);
-            }
+            // Eliminamos la notificación informativa y solo registramos la salida
+            setHasPendingEntry(true);
+            await registerExit(data.placa_detectada, userId);
           }
 
           try {
@@ -229,7 +216,7 @@ const CameraSection = () => {
       } else {
         if (lastNotification !== (data.mensaje || "No se detectaron placas.")) {
           toastr.error(data.mensaje || "No se detectaron placas.");
-          speak(data.mensaje || "No se detectaron placas");
+          speak(data.mensaje || "No某某 se detectaron placas");
           setLastNotification(data.mensaje || "No se detectaron placas.");
         }
       }
@@ -263,9 +250,9 @@ const CameraSection = () => {
 
       if (response.ok) {
         setVehicleDetails(data.vehiculo);
-        toastr.success(data.message || "Salida registrada exitosamente.");
+        toastr.success("Salida registrada exitosamente.");
         speak("Salida registrada exitosamente");
-        setLastNotification(data.message || "Salida registrada exitosamente.");
+        setLastNotification("Salida registrada exitosamente.");
         setHasPendingEntry(false);
       } else {
         const message = `Error: ${
