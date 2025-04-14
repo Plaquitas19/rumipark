@@ -7,6 +7,8 @@ import "jspdf-autotable";
 
 function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
+  const [filteredUsuarios, setFilteredUsuarios] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [time, setTime] = useState(new Date().toLocaleString());
@@ -36,6 +38,7 @@ function Usuarios() {
         );
         const usuariosData = response.data.vehiculos || [];
         setUsuarios(usuariosData);
+        setFilteredUsuarios(usuariosData); // Initialize filtered list
         setIsLoading(false);
       } catch (error) {
         console.error("Error de API:", error);
@@ -52,6 +55,22 @@ function Usuarios() {
 
     return () => clearInterval(intervalId);
   }, [navigate]);
+
+  const handleSearch = (e) => {
+    const query = e.target.value.toLowerCase();
+    setSearchQuery(query);
+
+    if (query) {
+      const filtered = usuarios.filter(
+        (usuario) =>
+          usuario.propietario.toLowerCase().includes(query) ||
+          usuario.numero_placa.toLowerCase().includes(query)
+      );
+      setFilteredUsuarios(filtered);
+    } else {
+      setFilteredUsuarios(usuarios);
+    }
+  };
 
   const simulateProgress = (callback) => {
     let progressValue = 0;
@@ -168,7 +187,7 @@ function Usuarios() {
   if (isLoading) {
     return (
       <div className="text-center p-8">
-        <div className="animate-spin border-4 border-solid border-blue-600 rounded-full w-12 h-12 mx-auto my-4"></div>
+        <div className="animate-spin border-4 border-solid border-[#167f9f] rounded-full w-12 h-12 mx-auto my-4"></div>
         <p className="text-lg text-gray-500">Cargando datos...</p>
       </div>
     );
@@ -179,82 +198,97 @@ function Usuarios() {
   }
 
   return (
-    <div className="bg-white shadow-xl rounded-lg p-8 mx-auto max-w-7xl">
-      <div className="flex justify-between items-center mb-8 border-b-2 pb-4">
-        <h2 className="text-4xl font-bold text-blue-800 flex items-center">
-          <i className="fas fa-users mr-3 text-blue-600"></i>
-          Listado de Usuarios
-        </h2>
-        <div className="text-lg font-semibold text-gray-600">
-          <i className="fas fa-clock mr-2 text-green-600"></i>
-          {time}
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-6 mb-6">
-        <button
-          onClick={exportToExcel}
-          className="px-6 py-3 border-2 border-[#2a6f3d] bg-[#2a6f3d] bg-opacity-20 text-[#2a6f3d] rounded-xl shadow-md hover:bg-[#276a37] hover:bg-opacity-80 hover:text-white focus:outline-none transition duration-200"
-        >
-          <i className="fas fa-file-excel mr-2"></i> Exportar a Excel
-        </button>
-
-        <button
-          onClick={exportToPDF}
-          className="px-6 py-3 border-2 border-[#dc615d] bg-[#fce1e0] text-[#dc615d] rounded-xl shadow-md hover:bg-[#dc615d] hover:text-white focus:outline-none transition duration-200"
-        >
-          <i className="fas fa-file-pdf mr-2"></i> Exportar a PDF
-        </button>
-      </div>
-
-      {isExporting && (
-        <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl">
-            <p className="text-xl font-semibold text-gray-700 mb-4">
-              Exportando a {exportType}...
-            </p>
-            <ProgressSphere />
+    <div className="w-full h-full min-h-screen p-5 bg-gray-100 overflow-auto">
+      <div className="bg-white shadow-xl rounded-lg p-8 mx-auto max-w-7xl">
+        <div className="flex flex-col items-center mb-8 border-b-2 pb-4 md:flex-row md:justify-between">
+          <h2 className="text-4xl font-bold text-[#167f9f] flex items-center text-center">
+            <i className="fas fa-users mr-3 text-[#167f9f]"></i>
+            Listado de Usuarios
+          </h2>
+          <div className="text-lg font-semibold text-gray-600 mt-2 md:mt-0">
+            <i className="fas fa-clock mr-2 text-green-600"></i>
+            {time}
           </div>
         </div>
-      )}
 
-      <div className="space-y-8">
-        {usuarios.length > 0 ? (
-          usuarios.map((usuario, index) => (
-            <div
-              key={index}
-              className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-lg shadow-lg hover:shadow-2xl transition-shadow duration-300"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <i className="fas fa-user text-blue-600 text-3xl mr-2"></i>
-                  <span className="text-xl font-bold text-blue-800">
-                    {usuario.numero_placa}
-                  </span>
-                </div>
-                <div className="text-lg font-medium text-gray-700">
-                  Tipo: {usuario.tipo_vehiculo}
-                </div>
-              </div>
+        <div className="relative flex items-center mb-6">
+          <div className="w-10 h-10 bg-[#167f9f] text-white rounded-full flex items-center justify-center shadow-md">
+            <i className="fas fa-search text-lg"></i>
+          </div>
+          <input
+            type="text"
+            placeholder="Buscar Propietario o Placa..."
+            value={searchQuery}
+            onChange={handleSearch}
+            className="ml-3 w-full sm:w-64 pl-4 pr-4 py-2 text-sm md:text-base text-gray-700 placeholder-gray-400 bg-white border border-[#167f9f] rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-[#167f9f]"
+          />
+        </div>
 
-              <div className="grid grid-cols-2 gap-6 text-md text-gray-700">
-                <div className="flex flex-col">
-                  <span className="font-medium">Propietario:</span>
-                  <span className="text-gray-500">{usuario.propietario}</span>
-                </div>
+        <div className="flex flex-col sm:flex-row justify-end gap-6 mb-6">
+          <button
+            onClick={exportToExcel}
+            className="px-6 py-3 border-2 border-[#2a6f3d] bg-[#2a6f3d] bg-opacity-20 text-[#2a6f3d] rounded-xl shadow-md hover:bg-[#276a37] hover:bg-opacity-80 hover:text-white focus:outline-none transition duration-200"
+          >
+            <i className="fas fa-file-excel mr-2"></i> Exportar a Excel
+          </button>
 
-                <div className="flex flex-col">
-                  <span className="font-medium">DNI:</span>
-                  <span className="text-gray-500">{usuario.dni}</span>
-                </div>
-              </div>
+          <button
+            onClick={exportToPDF}
+            className="px-6 py-3 border-2 border-[#dc615d] bg-[#fce1e0] text-[#dc615d] rounded-xl shadow-md hover:bg-[#dc615d] hover:text-white focus:outline-none transition duration-200"
+          >
+            <i className="fas fa-file-pdf mr-2"></i> Exportar a PDF
+          </button>
+        </div>
+
+        {isExporting && (
+          <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-60">
+            <div className="bg-white p-6 rounded-lg shadow-xl">
+              <p className="text-xl font-semibold text-gray-700 mb-4">
+                Exportando a {exportType}...
+              </p>
+              <ProgressSphere />
             </div>
-          ))
-        ) : (
-          <div className="text-center text-xl text-gray-500">
-            No se encontraron vehículos registrados.
           </div>
         )}
+
+        <div className="space-y-8">
+          {filteredUsuarios.length > 0 ? (
+            filteredUsuarios.map((usuario, index) => (
+              <div
+                key={index}
+                className="bg-gradient-to-r from-[#e9f7fd] to-[#e9f7fd] p-6 rounded-lg shadow-lg hover:shadow-2xl transition-shadow duration-300"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <i className="fas fa-user text-[#167f9f] text-3xl mr-2"></i>
+                    <span className="text-xl font-bold text-[#167f9f]">
+                      {usuario.numero_placa}
+                    </span>
+                  </div>
+                  <div className="text-lg font-medium text-gray-700">
+                    Tipo: {usuario.tipo_vehiculo}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-md text-gray-700">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Propietario:</span>
+                    <span className="text-gray-500">{usuario.propietario}</span>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <span className="font-medium">DNI:</span>
+                    <span className="text-gray-500">{usuario.dni}</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-xl text-gray-500">
+              No se encontraron vehículos registrados.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
