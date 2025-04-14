@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../assets/icono.png";
 import "font-awesome/css/font-awesome.min.css";
@@ -6,23 +6,55 @@ import "font-awesome/css/font-awesome.min.css";
 function Sidebar({ onToggleSidebar }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [saludo, setSaludo] = useState("");
+  const [username, setUsername] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Obtener el username desde localStorage
+    const usuarioUsername = localStorage.getItem("username") || "Usuario";
+    setUsername(usuarioUsername);
+
+    // Obtener la hora actual en la zona horaria de Perú para el saludo
+    const ahora = new Date();
+    const optionsSaludo = {
+      timeZone: "America/Lima",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    };
+
+    // Extraer la hora en formato 24 horas desde la zona horaria de Perú
+    const horaPeru = new Intl.DateTimeFormat("es-PE", optionsSaludo).format(
+      ahora
+    );
+    const hora = parseInt(horaPeru.split(":")[0], 10);
+
+    // Determinar el saludo según la hora
+    if (hora >= 0 && hora < 12) {
+      setSaludo("Buenos días");
+    } else if (hora >= 12 && hora < 18) {
+      setSaludo("Buenas tardes");
+    } else {
+      setSaludo("Buenas noches");
+    }
+  }, []);
 
   const toggleMenu = () => {
     const newIsMenuOpen = !isMenuOpen;
     setIsMenuOpen(newIsMenuOpen);
-    onToggleSidebar(newIsMenuOpen); // Actualiza el estado en App.js
+    onToggleSidebar(newIsMenuOpen);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("auth_token"); // Eliminar el token del almacenamiento
-    navigate("/login", { replace: true }); // Redirigir al login y reemplazar el historial
-    window.location.reload(); // Recargar la página
+    localStorage.removeItem("auth_token");
+    navigate("/login", { replace: true });
+    window.location.reload();
   };
 
   return (
     <div>
-      {/* Barra lateral (solo visible al abrir en móvil/tablet, fija en escritorio) */}
+      {/* Barra lateral */}
       <div
         className={`fixed top-0 left-0 h-full w-[200px] sm:w-[230px] lg:w-[260px] bg-[#1da4cf] text-white flex flex-col justify-between p-4 z-50 transform ${
           isMenuOpen ? "translate-x-0" : "-translate-x-full"
@@ -33,6 +65,13 @@ function Sidebar({ onToggleSidebar }) {
           {/* Contenedor del logo */}
           <div className="flex flex-col items-center justify-center py-6">
             <img src={logo} alt="Logo" className="w-25 h-25 object-contain" />
+          </div>
+
+          {/* Saludo como encabezado */}
+          <div className="px-4 pb-4 border-b border-white/20">
+            <h2 className="text-lg font-semibold text-white">
+              {saludo}, {username}!
+            </h2>
           </div>
 
           {/* Navegación del menú */}
@@ -63,7 +102,7 @@ function Sidebar({ onToggleSidebar }) {
 
         <div className="mt-auto">
           <button
-            onClick={() => setIsModalOpen(true)} // Mostrar modal al hacer clic
+            onClick={() => setIsModalOpen(true)}
             className="hover:bg-[#167f9f] p-2 rounded text-left text-xs sm:text-sm flex items-center w-full"
           >
             <i className="fa fa-sign-out mr-3 text-lg"></i> Salir
@@ -71,20 +110,20 @@ function Sidebar({ onToggleSidebar }) {
         </div>
       </div>
 
-      {/* Menú hamburguesa (solo visible en móvil/tablet, ajustado para no cruzarse con el header) */}
+      {/* Menú hamburguesa */}
       <button
         onClick={toggleMenu}
         className="lg:hidden text-2xl p-2 mt-4 absolute top-4 left-4 z-60 text-[#167f9f]"
-        style={{ top: "10px", left: "15px" }} // Ajustado para alinear con el texto del header
+        style={{ top: "10px", left: "15px" }}
       >
         <i className="fa fa-bars"></i>
       </button>
 
-      {/* Fondo semitransparente cuando el menú está abierto en móvil/tablet */}
+      {/* Fondo semitransparente */}
       {isMenuOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={toggleMenu} // Cierra el menú al hacer clic en el fondo
+          onClick={toggleMenu}
         ></div>
       )}
 
@@ -100,13 +139,13 @@ function Sidebar({ onToggleSidebar }) {
             </h2>
             <div className="flex justify-between">
               <button
-                onClick={() => setIsModalOpen(false)} // Cerrar el modal
+                onClick={() => setIsModalOpen(false)}
                 className="py-2 px-4 rounded-lg bg-gray-200 text-sm sm:text-base font-medium text-gray-700 hover:bg-gray-300 transition"
               >
                 Cancelar
               </button>
               <button
-                onClick={handleLogout} // Confirmar el cierre de sesión
+                onClick={handleLogout}
                 className="py-2 px-4 rounded-lg text-sm sm:text-base font-medium text-white transition"
                 style={{ backgroundColor: "#167f9f" }}
               >
