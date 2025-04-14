@@ -26,35 +26,34 @@ function Login() {
 
   // Manejar inicio de sesión
   const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch(`${API_URL}/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      });
+  e.preventDefault();
+  setIsLoading(true); // Mostrar el spinner inmediatamente
+  try {
+    const response = await fetch(`${API_URL}/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, password }),
+    });
 
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem("auth_token", data.token);
-        localStorage.setItem("username", data.username);
-        localStorage.setItem("id", data.id);
-        localStorage.setItem("plan_id", data.plan_id);
-        setIsLoading(true);
-        setTimeout(() => {
-          setIsLoading(false);
-          navigate("/dashboard/main");
-        }, 2000);
-      } else {
-        const errorData = await response.json();
-        toastr.error(errorData.message || "Credenciales incorrectas");
-      }
-    } catch (error) {
-      toastr.error("Error de conexión con el servidor");
+    if (response.ok) {
+      const data = await response.json();
+      // Corregir esto para que coincida con lo que devuelve el backend
+      localStorage.setItem("username", data.username);
+      localStorage.setItem("id", data.id);
+      setIsLoading(false);
+      navigate("/dashboard/main"); // Redirigir inmediatamente
+    } else {
+      const errorData = await response.json();
+      setIsLoading(false);
+      toastr.error(errorData.message || "Credenciales incorrectas");
     }
-  };
+  } catch (error) {
+    setIsLoading(false);
+    toastr.error("Error de conexión con el servidor");
+  }
+};
 
   // Manejar registro de usuario
   const handleRegister = async (e) => {
