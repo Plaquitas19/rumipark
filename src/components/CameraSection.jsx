@@ -20,6 +20,7 @@ const CameraSection = () => {
   const [hasPendingEntry, setHasPendingEntry] = useState(false);
   const [lastNotification, setLastNotification] = useState("");
   const [lastSpokenMessage, setLastSpokenMessage] = useState("");
+  const [lastEntryTime, setLastEntryTime] = useState(null); // Nuevo estado para almacenar la hora de la última entrada
 
   const speak = (message) => {
     if (lastSpokenMessage === message) return;
@@ -44,7 +45,7 @@ const CameraSection = () => {
 
     return () => clearInterval(detectionInterval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCameraActive, hasPendingEntry]);
+  }, [isCameraActive]);
 
   const dataURLToFile = (dataURL, filename) => {
     const arr = dataURL.split(",");
@@ -112,6 +113,7 @@ const CameraSection = () => {
       setHasPendingEntry(false);
       setLastNotification("");
       setLastSpokenMessage("");
+      setLastEntryTime(null); // Resetear la hora de la última entrada
     }
   };
 
@@ -154,10 +156,24 @@ const CameraSection = () => {
             speak("Placa detectada y entrada registrada");
             setLastNotification("Placa detectada y entrada registrada.");
             setHasPendingEntry(false);
+            setLastEntryTime(new Date()); // Almacenar la hora de la entrada
           } else {
-            // Eliminamos la notificación informativa y solo registramos la salida
+            // Si ya hay una entrada registrada, no intentamos registrar la salida automáticamente
+            if (
+              lastNotification !==
+              "El vehículo ya tiene una entrada registrada. Debes esperar al menos 3 minutos para registrar la salida."
+            ) {
+              toastr.info(
+                "El vehículo ya tiene una entrada registrada. Debes esperar al menos 3 minutos para registrar la salida."
+              );
+              speak(
+                "El vehículo ya tiene una entrada registrada. Debes esperar al menos 3 minutos para registrar la salida"
+              );
+              setLastNotification(
+                "El vehículo ya tiene una entrada registrada. Debes esperar al menos 3 minutos para registrar la salida."
+              );
+            }
             setHasPendingEntry(true);
-            await registerExit(data.placa_detectada, userId);
           }
 
           try {
@@ -216,7 +232,7 @@ const CameraSection = () => {
       } else {
         if (lastNotification !== (data.mensaje || "No se detectaron placas.")) {
           toastr.error(data.mensaje || "No se detectaron placas.");
-          speak(data.mensaje || "No某某 se detectaron placas");
+          speak(data.mensaje || "No se detectaron placas");
           setLastNotification(data.mensaje || "No se detectaron placas.");
         }
       }
@@ -231,6 +247,30 @@ const CameraSection = () => {
   };
 
   const registerExit = async (plate, userId) => {
+    // Verificar si han pasado al menos 3 minutos desde la última entrada
+    if (lastEntryTime) {
+      const currentTime = new Date();
+      const timeDiff = (currentTime - lastEntryTime) / 1000 / 60; // Diferencia en minutos
+      if (timeDiff < 3) {
+        const remainingTime = Math.ceil((3 - timeDiff) * 60); // Segundos restantes
+        if (
+          lastNotification !==
+          `Debes esperar ${remainingTime} segundos más para registrar la salida.`
+        ) {
+          toastr.warning(
+            `Debes esperar ${remainingTime} segundos más para registrar la salida.`
+          );
+          speak(
+            `Debes esperar ${remainingTime} segundos más para registrar la salida`
+          );
+          setLastNotification(
+            `Debes esperar ${remainingTime} segundos más para registrar la salida.`
+          );
+        }
+        return;
+      }
+    }
+
     try {
       const response = await fetch(
         "https://CamiMujica.pythonanywhere.com/salida",
@@ -254,6 +294,7 @@ const CameraSection = () => {
         speak("Salida registrada exitosamente");
         setLastNotification("Salida registrada exitosamente.");
         setHasPendingEntry(false);
+        setLastEntryTime(null); // Resetear la hora de la entrada después de una salida exitosa
       } else {
         const message = `Error: ${
           data.message || "No se pudo registrar la salida."
