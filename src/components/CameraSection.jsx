@@ -116,7 +116,7 @@ const CameraSection = () => {
 
     try {
       const response = await fetch(
-        "https://CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada",
+        "https://rumipark-CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada",
         {
           method: "POST",
           body: formData,
@@ -148,7 +148,7 @@ const CameraSection = () => {
           // Obtener detalles del vehículo
           try {
             const detailsResponse = await fetch(
-              `https://CamiMujica.pythonanywhere.com/vehiculo/${data.placa_detectada}?id=${userId}`
+              `https://rumipark-CamiMujica.pythonanywhere.com/vehiculo/${data.placa_detectada}?id=${userId}`
             );
             const detailsData = await detailsResponse.json();
 
@@ -180,7 +180,7 @@ const CameraSection = () => {
   const registerExit = async (plate, userId) => {
     try {
       const response = await fetch(
-        "https://CamiMujica.pythonanywhere.com/salida",
+        "https://rumipark-CamiMujica.pythonanywhere.com/salida",
         {
           method: "POST",
           headers: {
@@ -331,7 +331,7 @@ const CameraSection = () => {
                             try {
                               // Verificar si la placa está registrada llamando a la API, incluyendo el id en la URL
                               const response = await fetch(
-                                `https://CamiMujica.pythonanywhere.com/vehiculo/${editablePlate}?id=${userId}`
+                                `https://rumipark-CamiMujica.pythonanywhere.com/vehiculo/${editablePlate}?id=${userId}`
                               );
 
                               if (!response.ok) {
