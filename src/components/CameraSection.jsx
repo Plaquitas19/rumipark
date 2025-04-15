@@ -17,7 +17,7 @@ const CameraSection = () => {
   const [vehicleDetails, setVehicleDetails] = useState(null);
   const [isEditingPlate, setIsEditingPlate] = useState(false);
   const [editablePlate, setEditablePlate] = useState("");
-  const [hasPendingEntry, setHasPendingEntry] = useState(false);
+  const [setHasPendingEntry] = useState(false);
   const [lastNotification, setLastNotification] = useState("");
   const [lastSpokenMessage, setLastSpokenMessage] = useState("");
   const [lastEntryTime, setLastEntryTime] = useState(null);
@@ -45,6 +45,7 @@ const CameraSection = () => {
     }
 
     return () => clearInterval(detectionInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCameraActive]);
 
   const dataURLToFile = (dataURL, filename) => {
@@ -136,7 +137,7 @@ const CameraSection = () => {
 
     try {
       const response = await fetch(
-        "https://CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada",
+        "https://rumipark-CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada",
         {
           method: "POST",
           body: formData,
@@ -158,7 +159,9 @@ const CameraSection = () => {
             if (lastExitTimeForPlate) {
               const currentTime = new Date();
               const timeDiff = (currentTime - lastExitTimeForPlate) / 1000 / 60;
-              console.log(`Tiempo transcurrido desde la salida de ${data.placa_detectada}: ${timeDiff} minutos`);
+              console.log(
+                `Tiempo transcurrido desde la salida de ${data.placa_detectada}: ${timeDiff} minutos`
+              );
               if (timeDiff < 2) {
                 const remainingTime = Math.ceil((2 - timeDiff) * 60);
                 if (
@@ -193,14 +196,16 @@ const CameraSection = () => {
             });
           } else {
             // Si hay una entrada registrada, intentar registrar la salida
-            console.log(`Intentando registrar la salida para la placa ${data.placa_detectada}...`);
+            console.log(
+              `Intentando registrar la salida para la placa ${data.placa_detectada}...`
+            );
             await registerExit(data.placa_detectada, userId);
             setHasPendingEntry(true);
           }
 
           try {
             const detailsResponse = await fetch(
-              `https://CamiMujica.pythonanywhere.com/vehiculo/${data.placa_detectada}?id=${userId}`
+              `https://rumipark-CamiMujica.pythonanywhere.com/vehiculo/${data.placa_detectada}?id=${userId}`
             );
             const detailsData = await detailsResponse.json();
 
@@ -269,10 +274,12 @@ const CameraSection = () => {
   };
 
   const registerExit = async (plate, userId) => {
-    console.log(`Registrando salida para la placa: ${plate}, usuario: ${userId}`);
+    console.log(
+      `Registrando salida para la placa: ${plate}, usuario: ${userId}`
+    );
     try {
       const response = await fetch(
-        "https://CamiMujica.pythonanywhere.com/salida",
+        "https://rumipark-CamiMujica.pythonanywhere.com/salida",
         {
           method: "POST",
           headers: {
@@ -482,7 +489,7 @@ const CameraSection = () => {
                             const userId = localStorage.getItem("id");
                             try {
                               const response = await fetch(
-                                `https://CamiMujica.pythonanywhere.com/vehiculo/${editablePlate}?id=${userId}`
+                                `https://rumipark-CamiMujica.pythonanywhere.com/vehiculo/${editablePlate}?id=${userId}`
                               );
 
                               if (!response.ok) {
