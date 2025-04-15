@@ -9,7 +9,7 @@ const detectarYVerificarPlaca = async (blob, userId) => {
     formData.append("id", userId);
 
     const response = await fetch(
-      "https://CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada",
+      "https://rumipark-CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada",
       {
         method: "POST",
         body: formData,
