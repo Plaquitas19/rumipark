@@ -34,7 +34,7 @@ function Listado() {
     const fetchRegistros = async () => {
       try {
         const response = await axios.get(
-          "https://CamiMujica.pythonanywhere.com/todos_registros",
+          "https://rumipark-CamiMujica.pythonanywhere.com/todos_registros",
           {
             headers: {
               "Content-Type": "application/json",
@@ -187,7 +187,7 @@ function Listado() {
       console.log("Payload enviado al backend:", payload);
 
       const response = await axios.post(
-        "https://CamiMujica.pythonanywhere.com/registrar_observacion",
+        "https://rumipark-CamiMujica.pythonanywhere.com/registrar_observacion",
         payload,
         {
           headers: {
