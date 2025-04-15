@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { io } from "socket.io-client";
 
 function VehicleTable() {
   const [vehicles, setVehicles] = useState([]);
@@ -9,57 +8,25 @@ function VehicleTable() {
 
   const userId = localStorage.getItem("id");
 
-  // Conectar al WebSocket para actualizaciones en tiempo real
-  const connectSocket = useCallback(() => {
-    const socket = io("https://CamiMujica.pythonanywhere.com");
-
-    socket.on("actualizar_registros", (nuevoRegistro) => {
-      setVehicles((prevVehicles) => {
-        const updatedVehicles = prevVehicles.filter(
-          (v) => v.plate !== nuevoRegistro.numero_placa
-        );
-
-        // Agregar o actualizar registro
-        updatedVehicles.unshift({
-          plate: nuevoRegistro.numero_placa,
-          status:
-            nuevoRegistro.fecha_salida === null ||
-            nuevoRegistro.hora_salida === null
-              ? "Entrada"
-              : "Salida",
-          date:
-            nuevoRegistro.fecha_salida === null
-              ? nuevoRegistro.fecha_entrada
-              : nuevoRegistro.fecha_salida,
-          time:
-            nuevoRegistro.hora_salida === null
-              ? nuevoRegistro.hora_entrada
-              : nuevoRegistro.hora_salida,
-        });
-
-        return updatedVehicles.slice(0, 100); // Limitar a los 100 registros más recientes
-      });
-    });
-
-    return () => socket.disconnect();
-  }, []);
-
-  useEffect(() => {
-    connectSocket(); // Conectar al WebSocket solo una vez
-  }, [connectSocket]);
-
   // Cargar los registros iniciales y actualizar cada segundo
   useEffect(() => {
     const fetchRegistros = async () => {
       try {
+        if (!userId) {
+          throw new Error(
+            "No se encontró el ID del usuario. Por favor, inicia sesión nuevamente."
+          );
+        }
+
         const response = await axios.get(
-          "https://CamiMujica.pythonanywhere.com/registros",
+          "https://rumipark-CamiMujica.pythonanywhere.com/registros",
           {
             headers: {
               id: userId, // Asegúrate de que este userId sea el del usuario autenticado
             },
           }
         );
+
         const registros = response.data.registros || [];
         const vehicleData = registros.map((registro) => ({
           plate: registro.numero_placa,
@@ -76,18 +43,33 @@ function VehicleTable() {
               ? registro.hora_entrada
               : registro.hora_salida,
         }));
+
         setVehicles(vehicleData);
         setIsLoading(false);
+        setError(null); // Limpiar errores previos si la solicitud es exitosa
       } catch (error) {
-        setError("Error al obtener los registros. Intente nuevamente.");
+        console.error("Error al obtener los registros:", error);
+        const errorMessage = error.response
+          ? `Error al obtener los registros: ${
+              error.response.data.message || error.response.statusText
+            }`
+          : error.message ===
+            "No se encontró el ID del usuario. Por favor, inicia sesión nuevamente."
+          ? error.message
+          : "Error al obtener los registros. Verifica tu conexión o intenta nuevamente.";
+        setError(errorMessage);
         setIsLoading(false);
       }
     };
 
-    fetchRegistros(); // Llamada inicial
-    const intervalId = setInterval(fetchRegistros, 1000); // Actualización cada 1 segundo
+    // Llamada inicial
+    fetchRegistros();
 
-    return () => clearInterval(intervalId); // Limpiar intervalo cuando el componente se desmonte
+    // Actualización cada 1 segundo
+    const intervalId = setInterval(fetchRegistros, 1000);
+
+    // Limpiar intervalo cuando el componente se desmonte
+    return () => clearInterval(intervalId);
   }, [userId]);
 
   if (isLoading) {
