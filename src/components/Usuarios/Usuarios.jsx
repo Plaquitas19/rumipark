@@ -28,7 +28,7 @@ function Usuarios() {
     const fetchUsuarios = async () => {
       try {
         const response = await axios.get(
-          "https://CamiMujica.pythonanywhere.com/listar_vehiculos",
+          "https://rumipark-CamiMujica.pythonanywhere.com/listar_vehiculos",
           {
             headers: {
               "Content-Type": "application/json",
