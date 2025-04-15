@@ -21,7 +21,7 @@ const CameraSection = () => {
   const [lastNotification, setLastNotification] = useState("");
   const [lastSpokenMessage, setLastSpokenMessage] = useState("");
   const [lastEntryTime, setLastEntryTime] = useState(null);
-  const [lastExitTime, setLastExitTime] = useState(null);
+  const [lastExitTimes, setLastExitTimes] = useState({}); // Mapa de placas a sus tiempos de salida
 
   const speak = (message) => {
     if (lastSpokenMessage === message) return;
@@ -114,7 +114,7 @@ const CameraSection = () => {
       setLastNotification("");
       setLastSpokenMessage("");
       setLastEntryTime(null);
-      setLastExitTime(null);
+      setLastExitTimes({}); // Resetear los tiempos de salida por placa
     }
   };
 
@@ -153,41 +153,47 @@ const CameraSection = () => {
           setIsPlateRegistered(true);
 
           if (!data.entrada_registrada) {
-            // Verificar si han pasado al menos 2 minutos desde la última salida
-            if (lastExitTime) {
+            // Verificar si han pasado al menos 2 minutos desde la última salida para esta placa
+            const lastExitTimeForPlate = lastExitTimes[data.placa_detectada];
+            if (lastExitTimeForPlate) {
               const currentTime = new Date();
-              const timeDiff = (currentTime - lastExitTime) / 1000 / 60;
-              console.log(`Tiempo transcurrido desde la salida: ${timeDiff} minutos`);
+              const timeDiff = (currentTime - lastExitTimeForPlate) / 1000 / 60;
+              console.log(`Tiempo transcurrido desde la salida de ${data.placa_detectada}: ${timeDiff} minutos`);
               if (timeDiff < 2) {
                 const remainingTime = Math.ceil((2 - timeDiff) * 60);
                 if (
                   lastNotification !==
-                  `Debes esperar ${remainingTime} segundos más para registrar una nueva entrada.`
+                  `Debes esperar ${remainingTime} segundos más para registrar una nueva entrada para la placa ${data.placa_detectada}.`
                 ) {
                   toastr.warning(
-                    `Debes esperar ${remainingTime} segundos más para registrar una nueva entrada.`
+                    `Debes esperar ${remainingTime} segundos más para registrar una nueva entrada para la placa ${data.placa_detectada}.`
                   );
                   speak(
-                    `Debes esperar ${remainingTime} segundos más para registrar una nueva entrada`
+                    `Debes esperar ${remainingTime} segundos más para registrar una nueva entrada para la placa ${data.placa_detectada}`
                   );
                   setLastNotification(
-                    `Debes esperar ${remainingTime} segundos más para registrar una nueva entrada.`
+                    `Debes esperar ${remainingTime} segundos más para registrar una nueva entrada para la placa ${data.placa_detectada}.`
                   );
                 }
                 return;
               }
             }
 
-            // Registrar la entrada si han pasado 2 minutos desde la última salida
+            // Registrar la entrada si han pasado 2 minutos desde la última salida (o si no hay salida reciente para esta placa)
             toastr.success("Placa detectada y entrada registrada.");
             speak("Placa detectada y entrada registrada");
             setLastNotification("Placa detectada y entrada registrada.");
             setHasPendingEntry(false);
             setLastEntryTime(new Date());
-            setLastExitTime(null); // Resetear lastExitTime para permitir futuras salidas
+            // Eliminar el tiempo de salida para esta placa al registrar una entrada
+            setLastExitTimes((prev) => {
+              const updated = { ...prev };
+              delete updated[data.placa_detectada];
+              return updated;
+            });
           } else {
             // Si hay una entrada registrada, intentar registrar la salida
-            console.log("Intentando registrar la salida...");
+            console.log(`Intentando registrar la salida para la placa ${data.placa_detectada}...`);
             await registerExit(data.placa_detectada, userId);
             setHasPendingEntry(true);
           }
@@ -293,7 +299,11 @@ const CameraSection = () => {
           setLastNotification("Salida registrada exitosamente.");
           setHasPendingEntry(false);
           setLastEntryTime(null);
-          setLastExitTime(new Date()); // Registrar la hora de la salida
+          // Registrar la hora de la salida para esta placa
+          setLastExitTimes((prev) => ({
+            ...prev,
+            [plate]: new Date(),
+          }));
         } else if (
           data.message ===
           "El vehículo fue detectado antes del límite de 3 minutos. Esperando nueva detección."
@@ -304,16 +314,16 @@ const CameraSection = () => {
           const remainingTime = Math.ceil((3 - timeDiff) * 60);
           if (
             lastNotification !==
-            `Debes esperar ${remainingTime} segundos más para registrar la salida.`
+            `Debes esperar ${remainingTime} segundos más para registrar la salida de la placa ${plate}.`
           ) {
             toastr.warning(
-              `Debes esperar ${remainingTime} segundos más para registrar la salida.`
+              `Debes esperar ${remainingTime} segundos más para registrar la salida de la placa ${plate}.`
             );
             speak(
-              `Debes esperar ${remainingTime} segundos más para registrar la salida`
+              `Debes esperar ${remainingTime} segundos más para registrar la salida de la placa ${plate}`
             );
             setLastNotification(
-              `Debes esperar ${remainingTime} segundos más para registrar la salida.`
+              `Debes esperar ${remainingTime} segundos más para registrar la salida de la placa ${plate}.`
             );
           }
         } else {
