@@ -3,7 +3,6 @@ import NewVehicleModal from "./NewVehicleModal";
 import "@fortawesome/fontawesome-free/css/all.css"; // Si usas FontAwesome
 import toastr from "toastr";
 import "toastr/build/toastr.min.css";
-import "@fortawesome/fontawesome-free/css/all.css";
 
 const CameraSection = () => {
   const videoRef = useRef(null);
@@ -18,23 +17,40 @@ const CameraSection = () => {
   const [vehicleDetails, setVehicleDetails] = useState(null);
   const [isEditingPlate, setIsEditingPlate] = useState(false);
   const [editablePlate, setEditablePlate] = useState("");
+  const [blockedPlates, setBlockedPlates] = useState({}); // Estado para placas bloqueadas
 
-  // Temporalizador para detectar cada 5 segundos automáticamente
+  // Temporalizador para detectar cada 2 segundos automáticamente
   useEffect(() => {
     let detectionInterval;
     if (isCameraActive) {
-      // Setea el temporizador para capturar y procesar cada 5 segundos
       detectionInterval = setInterval(() => {
         detectFromCamera();
-      }, 2000); // Cada 5 segundos
+      }, 2000); // Cada 2 segundos
     } else {
-      // Limpiar intervalo cuando la cámara no está activa
       clearInterval(detectionInterval);
     }
 
     return () => clearInterval(detectionInterval); // Limpiar intervalo al desmontarse el componente
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCameraActive]); // Include detectFromCamera in the dependencies
+  }, [isCameraActive]); // Dependencia en isCameraActive
+
+  // Limpieza de placas bloqueadas después de 2 minutos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setBlockedPlates((prev) => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach((plate) => {
+          if (now >= updated[plate]) {
+            delete updated[plate];
+          }
+        });
+        return updated;
+      });
+    }, 1000); // Verificar cada segundo
+
+    return () => clearInterval(interval);
+  }, []);
 
   const dataURLToFile = (dataURL, filename) => {
     const arr = dataURL.split(",");
@@ -130,6 +146,14 @@ const CameraSection = () => {
         setDetectedPlate(data.placa_detectada);
         setPlateImage(`data:image/jpeg;base64,${data.placa_imagen}`);
 
+        // Verificar si la placa está bloqueada localmente
+        if (blockedPlates[data.placa_detectada]) {
+          toastr.info(
+            `La placa ${data.placa_detectada} tiene una salida reciente. Debe esperar antes de registrar una nueva entrada.`
+          );
+          return;
+        }
+
         // Si la placa está registrada
         if (data.estado === "Placa registrada") {
           setIsPlateRegistered(true);
@@ -167,6 +191,13 @@ const CameraSection = () => {
           toastr.warning(
             "Placa no registrada. Por favor, registre el vehículo para procesar la entrada."
           );
+        } else if (data.estado === "Salida reciente") {
+          toastr.info(data.mensaje);
+          // Bloquear la placa localmente por 2 minutos
+          setBlockedPlates((prev) => ({
+            ...prev,
+            [data.placa_detectada]: Date.now() + 2 * 60 * 1000, // 2 minutos en milisegundos
+          }));
         }
       } else {
         toastr.error(data.mensaje || "No se detectaron placas.");
@@ -198,6 +229,12 @@ const CameraSection = () => {
       if (response.ok) {
         setVehicleDetails(data.vehiculo); // Actualiza los detalles del vehículo
         toastr.success(data.message || "Salida registrada automáticamente.");
+
+        // Bloquear la placa localmente por 2 minutos después de registrar una salida
+        setBlockedPlates((prev) => ({
+          ...prev,
+          [plate]: Date.now() + 2 * 60 * 1000, // 2 minutos en milisegundos
+        }));
       } else {
         toastr.warning(
           `Error: ${data.message || "No se pudo registrar la salida."}`
