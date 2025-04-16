@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import NewVehicleModal from "./NewVehicleModal";
-import "@fortawesome/fontawesome-free/css/all.css"; // Si usas FontAwesome
+import "@fortawesome/fontawesome-free/css/all.css";
 import toastr from "toastr";
 import "toastr/build/toastr.min.css";
 
@@ -17,24 +17,23 @@ const CameraSection = () => {
   const [vehicleDetails, setVehicleDetails] = useState(null);
   const [isEditingPlate, setIsEditingPlate] = useState(false);
   const [editablePlate, setEditablePlate] = useState("");
-  const [blockedPlates, setBlockedPlates] = useState({}); // Estado para placas bloqueadas
+  const [blockedPlates, setBlockedPlates] = useState({});
+  const [lastNotification, setLastNotification] = useState({});
+  const readNotificationsRef = useRef(new Set());
 
-  // Temporalizador para detectar cada 2 segundos automáticamente
   useEffect(() => {
     let detectionInterval;
     if (isCameraActive) {
       detectionInterval = setInterval(() => {
         detectFromCamera();
-      }, 2000); // Cada 2 segundos
+      }, 2000);
     } else {
       clearInterval(detectionInterval);
     }
-
-    return () => clearInterval(detectionInterval); // Limpiar intervalo al desmontarse el componente
+    return () => clearInterval(detectionInterval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCameraActive]); // Dependencia en isCameraActive
+  }, [isCameraActive]);
 
-  // Limpieza de placas bloqueadas después de 2 minutos
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -47,8 +46,7 @@ const CameraSection = () => {
         });
         return updated;
       });
-    }, 1000); // Verificar cada segundo
-
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -78,23 +76,18 @@ const CameraSection = () => {
       const videoDevices = devices.filter(
         (device) => device.kind === "videoinput"
       );
-
       let backCamera = videoDevices.find((device) =>
         device.label.toLowerCase().includes("back")
       );
-
       const camera =
         backCamera ||
         videoDevices.find((device) => device.kind === "videoinput");
-
       if (!camera) {
         throw new Error("No hay cámaras disponibles.");
       }
-
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: camera.deviceId },
       });
-
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.onloadedmetadata = () => {
@@ -118,18 +111,51 @@ const CameraSection = () => {
     }
   };
 
+  const showNotification = (message, type) => {
+    const now = Date.now();
+    const lastShown = lastNotification[message] || 0;
+    const thirtySeconds = 30 * 1000;
+    if (now - lastShown >= thirtySeconds) {
+      toastr[type](message);
+      setLastNotification((prev) => ({
+        ...prev,
+        [message]: now,
+      }));
+      if (!readNotificationsRef.current.has(message)) {
+        const utterance = new SpeechSynthesisUtterance(message);
+        const voices = window.speechSynthesis.getVoices();
+        const spanishVoice =
+          voices.find((voice) => voice.lang === "es-ES") || voices[0];
+        utterance.voice = spanishVoice;
+        utterance.lang = "es-ES";
+        utterance.rate = 1;
+        utterance.pitch = 1.2;
+        window.speechSynthesis.speak(utterance);
+        readNotificationsRef.current.add(message);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const loadVoices = () => {
+      window.speechSynthesis.getVoices();
+    };
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
+
   const detectPlate = async (file) => {
     const userId = localStorage.getItem("id");
-
     if (!userId) {
-      toastr.error("Usuario no autenticado");
+      showNotification("Usuario no autenticado", "error");
       return;
     }
-
     const formData = new FormData();
     formData.append("file", file);
     formData.append("id", userId);
-
     try {
       const response = await fetch(
         "https://rumipark-CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada",
@@ -138,72 +164,66 @@ const CameraSection = () => {
           body: formData,
         }
       );
-
       const data = await response.json();
-
       if (response.ok) {
-        // Mostrar siempre la imagen y la placa detectada
         setDetectedPlate(data.placa_detectada);
         setPlateImage(`data:image/jpeg;base64,${data.placa_imagen}`);
-
-        // Verificar si la placa está bloqueada localmente
         if (blockedPlates[data.placa_detectada]) {
-          toastr.info(
-            `La placa ${data.placa_detectada} tiene una salida reciente. Debe esperar antes de registrar una nueva entrada.`
+          showNotification(
+            `La placa ${data.placa_detectada} tiene una salida reciente. Debe esperar antes de registrar una nueva entrada.`,
+            "info"
           );
           return;
         }
-
-        // Si la placa está registrada
         if (data.estado === "Placa registrada") {
           setIsPlateRegistered(true);
-
           if (!data.entrada_registrada) {
-            toastr.success("Placa detectada y entrada registrada.");
-          } else {
-            toastr.info(
-              "El vehículo ya tiene una entrada registrada. Verificando salida automáticamente..."
+            showNotification(
+              "Placa detectada y entrada registrada.",
+              "success"
             );
-
-            // Llamar a la API de salida para registrar automáticamente
+          } else {
             await registerExit(data.placa_detectada, userId);
           }
-
-          // Obtener detalles del vehículo
           try {
             const detailsResponse = await fetch(
               `https://rumipark-CamiMujica.pythonanywhere.com/vehiculo/${data.placa_detectada}?id=${userId}`
             );
             const detailsData = await detailsResponse.json();
-
             if (detailsResponse.ok) {
               setVehicleDetails(detailsData);
             } else {
               setVehicleDetails(null);
-              toastr.error("No se pudieron obtener los detalles del vehículo.");
+              showNotification(
+                "No se pudieron obtener los detalles del vehículo.",
+                "error"
+              );
             }
           } catch (err) {
             console.error("Error al obtener detalles del vehículo:", err);
-            toastr.error("No se pudieron obtener los detalles del vehículo.");
+            showNotification(
+              "No se pudieron obtener los detalles del vehículo.",
+              "error"
+            );
           }
         } else if (data.estado === "Placa no registrada") {
           setIsPlateRegistered(false);
-          toastr.warning(
-            "Placa no registrada. Por favor, registre el vehículo para procesar la entrada."
+          showNotification(
+            "Placa no registrada. Por favor, registre el vehículo para procesar la entrada.",
+            "warning"
           );
         } else if (data.estado === "Salida reciente") {
-          toastr.info(data.mensaje);
-          // Bloquear la placa localmente por 2 minutos
+          showNotification(data.mensaje, "info");
           setBlockedPlates((prev) => ({
             ...prev,
-            [data.placa_detectada]: Date.now() + 2 * 60 * 1000, // 2 minutos en milisegundos
+            [data.placa_detectada]: Date.now() + 2 * 60 * 1000,
           }));
         }
       } else {
-        toastr.error(data.mensaje || "No se detectaron placas.");
+        showNotification(data.mensaje || "No se detectaron placas.", "error");
       }
     } catch (err) {
-      toastr.error("Error al procesar la imagen.");
+      showNotification("Error al procesar la imagen.", "error");
       console.error("Error al enviar la imagen:", err);
     }
   };
@@ -223,26 +243,26 @@ const CameraSection = () => {
           }),
         }
       );
-
       const data = await response.json();
-
       if (response.ok) {
-        setVehicleDetails(data.vehiculo); // Actualiza los detalles del vehículo
-        toastr.success(data.message || "Salida registrada automáticamente.");
-
-        // Bloquear la placa localmente por 2 minutos después de registrar una salida
+        setVehicleDetails(data.vehiculo);
+        showNotification(
+          data.message || "Salida registrada automáticamente.",
+          "success"
+        );
         setBlockedPlates((prev) => ({
           ...prev,
-          [plate]: Date.now() + 2 * 60 * 1000, // 2 minutos en milisegundos
+          [plate]: Date.now() + 2 * 60 * 1000,
         }));
       } else {
-        toastr.warning(
-          `Error: ${data.message || "No se pudo registrar la salida."}`
+        showNotification(
+          `Error: ${data.message || "No se pudo registrar la salida."}`,
+          "warning"
         );
         console.error("Respuesta de error de la API:", data);
       }
     } catch (err) {
-      toastr.error("Error al intentar registrar la salida.");
+      showNotification("Error al intentar registrar la salida.", "error");
       console.error("Error en el frontend:", err);
     }
   };
@@ -256,10 +276,12 @@ const CameraSection = () => {
 
   const detectFromCamera = async () => {
     if (!isCameraActive || !videoRef.current) {
-      toastr.error("Debes activar la cámara para poder detectar la placa.");
+      showNotification(
+        "Debes activar la cámara para poder detectar la placa.",
+        "error"
+      );
       return;
     }
-
     const video = videoRef.current;
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
@@ -268,7 +290,7 @@ const CameraSection = () => {
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     const imageData = canvas.toDataURL("image/jpeg");
     const file = dataURLToFile(imageData, "captura.jpg");
-    detectPlate(file); // Llama a la función que detecta la placa automáticamente
+    detectPlate(file);
   };
 
   return (
@@ -289,7 +311,6 @@ const CameraSection = () => {
               className="absolute w-auto h-full object-cover rounded-lg"
             ></video>
           </div>
-
           <div className="flex flex-col md:flex-row justify-between w-full mt-4 px-4 gap-4">
             <button
               className="px-6 py-3 bg-[#167f9f] text-white rounded-lg hover:bg-[#146c83] w-full md:w-auto flex items-center justify-center"
@@ -300,7 +321,6 @@ const CameraSection = () => {
             </button>
           </div>
         </div>
-
         <div className="w-full md:w-1/2 flex flex-col gap-6">
           <div className="p-4 bg-white rounded-lg shadow-lg">
             <div className="flex flex-col items-center gap-4">
@@ -316,7 +336,6 @@ const CameraSection = () => {
                   ></i>
                   {isCameraActive ? "Desactivar cámara" : "Activar cámara"}
                 </button>
-
                 <label className="px-6 py-2 bg-[#167f9f] text-white rounded-lg hover:bg-[#146c83] cursor-pointer">
                   <i className="fas fa-upload mr-2"></i>Subir Imagen
                   <input
@@ -329,7 +348,6 @@ const CameraSection = () => {
                 </label>
               </div>
             </div>
-
             <div className="mt-6 text-center">
               {plateImage && (
                 <div>
@@ -347,10 +365,8 @@ const CameraSection = () => {
                     alt="Placa detectada"
                     className="w-48 h-auto border-4 border-gray-300 rounded-xl shadow-md mt-4"
                   />
-
                   <div className="flex items-center justify-center gap-4 mt-4">
                     {isEditingPlate ? (
-                      // Modo de edición: Campo de entrada y botón de guardar
                       <div className="flex items-center gap-2">
                         <input
                           type="text"
@@ -360,49 +376,44 @@ const CameraSection = () => {
                         />
                         <button
                           onClick={async () => {
-                            setDetectedPlate(editablePlate); // Guarda los cambios en la placa
-                            setIsEditingPlate(false); // Cambia al modo de solo lectura
-
-                            const userId = localStorage.getItem("id"); // Obtener el id del usuario desde localStorage
-
+                            setDetectedPlate(editablePlate);
+                            setIsEditingPlate(false);
+                            const userId = localStorage.getItem("id");
                             try {
-                              // Verificar si la placa está registrada llamando a la API, incluyendo el id en la URL
                               const response = await fetch(
                                 `https://rumipark-CamiMujica.pythonanywhere.com/vehiculo/${editablePlate}?id=${userId}`
                               );
-
                               if (!response.ok) {
                                 if (response.status === 404) {
-                                  toastr.error(
-                                    "La placa corregida no está registrada. Por favor, regístrala primero."
+                                  showNotification(
+                                    "La placa corregida no está registrada. Por favor, regístrala primero.",
+                                    "error"
                                   );
                                   setIsPlateRegistered(false);
                                   return;
                                 } else {
-                                  toastr.error(
-                                    "Error al verificar el estado de la placa."
+                                  showNotification(
+                                    "Error al verificar el estado de la placa.",
+                                    "error"
                                   );
                                   return;
                                 }
                               }
-                              // La placa está registrada, actualizar estado y datos
                               const data = await response.json();
-                              setVehicleDetails(data); // Actualiza los detalles del vehículo
-                              setIsPlateRegistered(true); // Marca la placa como registrada
-
-                              // Notificación de éxito
-                              toastr.success(
-                                "Placa corregida y verificada. Ahora puedes registrar la entrada manualmente."
+                              setVehicleDetails(data);
+                              setIsPlateRegistered(true);
+                              showNotification(
+                                "Placa corregida y verificada. Ahora puedes registrar la entrada manualmente.",
+                                "success"
                               );
                             } catch (err) {
                               console.error(
                                 "Error al procesar la placa editada:",
                                 err
                               );
-
-                              // Notificación de error
-                              toastr.error(
-                                "Hubo un problema al procesar la placa editada. Por favor, inténtalo más tarde."
+                              showNotification(
+                                "Hubo un problema al procesar la placa editada. Por favor, inténtalo más tarde.",
+                                "error"
                               );
                             }
                           }}
@@ -412,15 +423,14 @@ const CameraSection = () => {
                         </button>
                       </div>
                     ) : (
-                      // Modo de solo lectura: Texto y botón de editar
                       <div className="flex items-center gap-2">
                         <span className="text-lg font-bold">
                           {detectedPlate}
                         </span>
                         <button
                           onClick={() => {
-                            setEditablePlate(detectedPlate); // Copia el valor actual
-                            setIsEditingPlate(true); // Cambia al modo de edición
+                            setEditablePlate(detectedPlate);
+                            setIsEditingPlate(true);
                           }}
                           className="px-2 py-1 bg-gray-300 text-gray-600 rounded-full hover:bg-gray-400 transition-all"
                         >
@@ -429,7 +439,6 @@ const CameraSection = () => {
                       </div>
                     )}
                   </div>
-                  {/* Detalles del vehículo */}
                   {vehicleDetails && (
                     <div className="mt-6 bg-white p-6 rounded-xl shadow-lg border border-gray-300 space-y-6">
                       <h3 className="text-2xl font-bold text-gray-800 text-center flex items-center justify-center gap-2">
@@ -437,7 +446,6 @@ const CameraSection = () => {
                         del Vehículo
                       </h3>
                       <div className="space-y-4">
-                        {/* Tipo de Vehículo */}
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
                             <i className="fas fa-car-side text-lg"></i>
@@ -451,7 +459,6 @@ const CameraSection = () => {
                             </p>
                           </div>
                         </div>
-                        {/* Propietario */}
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
                             <i className="fas fa-user text-lg"></i>
@@ -465,8 +472,6 @@ const CameraSection = () => {
                             </p>
                           </div>
                         </div>
-
-                        {/* DNI */}
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center">
                             <i className="fas fa-id-card text-lg"></i>
