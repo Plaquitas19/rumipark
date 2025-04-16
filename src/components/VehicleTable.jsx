@@ -22,7 +22,7 @@ function VehicleTable() {
           "https://rumipark-CamiMujica.pythonanywhere.com/registros",
           {
             headers: {
-              id: userId, // Asegúrate de que este userId sea el del usuario autenticado
+              id: userId,
             },
           }
         );
@@ -46,7 +46,7 @@ function VehicleTable() {
 
         setVehicles(vehicleData);
         setIsLoading(false);
-        setError(null); // Limpiar errores previos si la solicitud es exitosa
+        setError(null);
       } catch (error) {
         console.error("Error al obtener los registros:", error);
         const errorMessage = error.response
@@ -62,13 +62,8 @@ function VehicleTable() {
       }
     };
 
-    // Llamada inicial
     fetchRegistros();
-
-    // Actualización cada 1 segundo
     const intervalId = setInterval(fetchRegistros, 1000);
-
-    // Limpiar intervalo cuando el componente se desmonte
     return () => clearInterval(intervalId);
   }, [userId]);
 
@@ -82,19 +77,19 @@ function VehicleTable() {
 
   return (
     <div className="bg-white shadow-md rounded-lg p-6 mx-auto max-w-full overflow-x-auto">
-      <table className="table-auto w-full text-sm text-gray-700">
+      <table className="w-full text-sm text-gray-700 border-collapse">
         <thead>
           <tr className="bg-blue-50 text-blue-800">
-            <th className="text-left py-2 px-4 border-b">
+            <th className="text-left py-2 px-4 border-b w-1/4">
               <i className="fas fa-car-side mr-2"></i>Placa
             </th>
-            <th className="text-left py-2 px-4 border-b">
+            <th className="text-left py-2 px-4 border-b w-1/4">
               <i className="fas fa-info-circle mr-2"></i>Estado
             </th>
-            <th className="text-left py-2 px-4 border-b">
+            <th className="text-left py-2 px-4 border-b w-1/4">
               <i className="fas fa-calendar-day mr-2"></i>Fecha
             </th>
-            <th className="text-left py-2 px-4 border-b">
+            <th className="text-left py-2 px-4 border-b w-1/4">
               <i className="fas fa-clock mr-2"></i>Hora
             </th>
           </tr>
@@ -108,13 +103,15 @@ function VehicleTable() {
                   index % 2 === 0 ? "bg-white" : "bg-blue-50"
                 } hover:bg-blue-200 transition-colors duration-300`}
               >
-                <td className="py-2 px-4 border-b flex items-center break-words">
-                  <i className="fas fa-car text-blue-500 mr-2"></i>
-                  {vehicle.plate}
+                <td className="py-2 px-4 border-b w-1/4">
+                  <div className="flex items-center">
+                    <i className="fas fa-car text-blue-500 mr-2"></i>
+                    <span className="truncate">{vehicle.plate}</span>
+                  </div>
                 </td>
-                <td className="py-2 px-4 border-b">
+                <td className="py-2 px-4 border-b w-1/4">
                   <span
-                    className={`px-3 py-1 rounded-md text-xs font-medium flex items-center ${
+                    className={`inline-flex px-3 py-1 rounded-md text-xs font-medium items-center ${
                       vehicle.status === "Entrada"
                         ? "bg-green-200 text-green-800"
                         : "bg-orange-200 text-orange-800"
@@ -130,13 +127,17 @@ function VehicleTable() {
                     {vehicle.status}
                   </span>
                 </td>
-                <td className="py-2 px-4 border-b flex items-center break-words">
-                  <i className="fas fa-calendar-alt text-blue-500 mr-2"></i>
-                  {vehicle.date}
+                <td className="py-2 px-4 border-b w-1/4">
+                  <div className="flex items-center">
+                    <i className="fas fa-calendar-alt text-blue-500 mr-2"></i>
+                    <span className="truncate">{vehicle.date}</span>
+                  </div>
                 </td>
-                <td className="py-2 px-4 border-b flex items-center break-words">
-                  <i className="fas fa-clock text-green-500 mr-2"></i>
-                  {vehicle.time}
+                <td className="py-2 px-4 border-b w-1/4">
+                  <div className="flex items-center">
+                    <i className="fas fa-clock text-green-500 mr-2"></i>
+                    <span className="truncate">{vehicle.time}</span>
+                  </div>
                 </td>
               </tr>
             ))
