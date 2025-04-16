@@ -1,26 +1,47 @@
 import React, { useRef, useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min";
+import toastr from "toastr";
+import "toastr/build/toastr.min.css";
 
-const detectarYVerificarPlaca = async (blob, userId) => {
-  try {
-    const formData = new FormData();
-    formData.append("file", blob, "photo.jpg");
-    formData.append("id", userId);
+const normalizePlate = (plate) => {
+  return plate
+    .replace(/[-_\s]/g, "") // Elimina guiones, espacios y guiones bajos
+    .toUpperCase()
+    .trim(); // Elimina espacios al inicio o final
+};
 
-    const response = await fetch(
-      "https://rumipark-CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada",
-      {
-        method: "POST",
-        body: formData,
+const detectarYVerificarPlaca = async (blob, userId, retries = 2) => {
+  const formData = new FormData();
+  formData.append("file", blob, "photo.jpg");
+  formData.append("id", userId);
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(
+        "https://rumipark-CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      const data = await response.json();
+      if (
+        response.ok &&
+        data.placa_detectada &&
+        /^[A-Z0-9]{6,7}$/.test(normalizePlate(data.placa_detectada))
+      ) {
+        return data;
+      } else {
+        if (attempt === retries) {
+          return { error: data.mensaje || "No se detectaron placas válidas." };
+        }
       }
-    );
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Error al enviar la solicitud a la API:", error);
-    return { error: "Error al procesar la imagen" };
+    } catch (error) {
+      if (attempt === retries) {
+        return { error: "Error al procesar la imagen." };
+      }
+    }
   }
 };
 
@@ -28,7 +49,7 @@ const CameraDetection = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [resultado, setResultado] = useState(null);
-  const [detected, setDetected] = useState(false); // Para indicar si ya se detectó la placa
+  const [recentPlates, setRecentPlates] = useState({}); // Bloqueo de placas recientes (3 minutos)
 
   useEffect(() => {
     const startCamera = async () => {
@@ -42,14 +63,13 @@ const CameraDetection = () => {
         }
       } catch (err) {
         console.error("Error al acceder a la cámara:", err);
+        toastr.error("No se pudo acceder a la cámara. Verifica los permisos.");
       }
     };
 
     startCamera();
 
     const intervalId = setInterval(async () => {
-      if (detected) return; // Si ya se detectó la placa, dejamos de procesar
-
       try {
         const canvas = canvasRef.current;
         const video = videoRef.current;
@@ -62,40 +82,88 @@ const CameraDetection = () => {
           const blob = await fetch(dataURL).then((res) => res.blob());
 
           const userId = localStorage.getItem("id");
-          const data = await detectarYVerificarPlaca(blob, userId);
+          if (!userId) {
+            toastr.error("Usuario no autenticado.");
+            return;
+          }
 
-          if (
-            data &&
-            (data.estado === "Placa registrada" ||
-              data.estado === "Placa no registrada")
-          ) {
-            setResultado({
-              mensaje: data.mensaje,
-              estado: data.estado,
-              placa_imagen: data.placa_imagen || null,
-              placa_detectada:
-                data.placa_detectada || "No se detectaron caracteres",
+          const now = Date.now();
+          // Limpiar placas recientes
+          setRecentPlates((prev) => {
+            const updated = { ...prev };
+            Object.keys(updated).forEach((plate) => {
+              if (now >= updated[plate]) {
+                delete updated[plate];
+              }
             });
+            return updated;
+          });
 
-            if (data.estado === "Placa registrada") {
-              // Aquí es donde puedes realizar alguna acción, como la actualización del estado en la base de datos
-              console.log(
-                "Placa registrada con éxito, actualizando el sistema..."
-              );
-            } else {
-              // Si la placa no estaba registrada, puedes dar la opción de registrar
-              console.log("Placa no registrada, dando opción de registro...");
-            }
-
-            setDetected(true); // Detener la detección
-          } else {
+          const data = await detectarYVerificarPlaca(blob, userId);
+          if (data.error) {
             setResultado({
-              mensaje: "Error al procesar la imagen o no se detectaron placas.",
+              mensaje: data.error,
               estado: "Error",
               placa_imagen: null,
               placa_detectada: null,
             });
+            toastr.error(data.error);
+            return;
           }
+
+          const normalizedPlate = normalizePlate(data.placa_detectada);
+          // Verificar si la placa está bloqueada
+          if (recentPlates[normalizedPlate]) {
+            toastr.info(
+              `Placa ${normalizedPlate} detectada recientemente. Espera 3 minutos.`
+            );
+            return;
+          }
+
+          // Verificar si la placa está registrada
+          try {
+            const detailsResponse = await fetch(
+              `https://rumipark-CamiMujica.pythonanywhere.com/vehiculo/${normalizedPlate}?id=${userId}`
+            );
+            const detailsData = await detailsResponse.json();
+            if (detailsResponse.ok) {
+              setResultado({
+                mensaje: "Placa registrada.",
+                estado: "Placa registrada",
+                placa_imagen: data.placa_imagen || null,
+                placa_detectada: normalizedPlate,
+                detalles: detailsData,
+              });
+              toastr.success("Placa registrada.");
+            } else {
+              setResultado({
+                mensaje:
+                  "Placa no registrada. Por favor, registre el vehículo.",
+                estado: "Placa no registrada",
+                placa_imagen: data.placa_imagen || null,
+                placa_detectada: normalizedPlate,
+                detalles: null,
+              });
+              toastr.warning(
+                "Placa no registrada. Por favor, registre el vehículo."
+              );
+            }
+          } catch (err) {
+            setResultado({
+              mensaje: "No se pudieron obtener los detalles del vehículo.",
+              estado: "Error",
+              placa_imagen: data.placa_imagen || null,
+              placa_detectada: normalizedPlate,
+              detalles: null,
+            });
+            toastr.error("No se pudieron obtener los detalles del vehículo.");
+          }
+
+          // Bloquear la placa por 3 minutos
+          setRecentPlates((prev) => ({
+            ...prev,
+            [normalizedPlate]: now + 3 * 60 * 1000, // 3 minutos
+          }));
         }
       } catch (err) {
         console.error("Error al procesar el cuadro:", err);
@@ -105,14 +173,19 @@ const CameraDetection = () => {
           placa_imagen: null,
           placa_detectada: null,
         });
+        toastr.error("Error al procesar la imagen.");
       }
-    }, 1000); // Capturar cada 1000ms (1 segundo)
+    }, 2000); // Capturar cada 2 segundos
 
-    // Limpiar intervalos al desmontar el componente
     return () => {
       clearInterval(intervalId);
+      if (videoRef.current && videoRef.current.srcObject) {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        const stream = videoRef.current.srcObject;
+        stream.getTracks().forEach((track) => track.stop());
+      }
     };
-  }, [detected]);
+  }, [recentPlates]);
 
   return (
     <div className="min-h-screen bg-light p-6">
@@ -139,6 +212,20 @@ const CameraDetection = () => {
             <p className="mt-3">
               <strong>Placa detectada:</strong> {resultado.placa_detectada}
             </p>
+          )}
+          {resultado.detalles && (
+            <div className="mt-4">
+              <h6>Detalles del Vehículo</h6>
+              <p>
+                <strong>Tipo:</strong> {resultado.detalles.tipo_vehiculo}
+              </p>
+              <p>
+                <strong>Propietario:</strong> {resultado.detalles.propietario}
+              </p>
+              <p>
+                <strong>DNI:</strong> {resultado.detalles.dni}
+              </p>
+            </div>
           )}
         </div>
       )}
