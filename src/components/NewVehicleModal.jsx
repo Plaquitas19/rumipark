@@ -1,156 +1,171 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import axios from "axios";
+import toastr from "toastr"; // Para mostrar notificaciones
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCar, faIdCard, faPen } from "@fortawesome/free-solid-svg-icons";
 
-function VehicleTable() {
-  const [vehicles, setVehicles] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    numero_placa: "",
+    tipo_vehiculo: "",
+    propietario: "",
+    dni: "",
+  });
 
-  const userId = localStorage.getItem("id");
+  // Maneja el envío del formulario
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  // Cargar los registros iniciales y actualizar cada segundo
-  useEffect(() => {
-    const fetchRegistros = async () => {
-      try {
-        if (!userId) {
-          throw new Error(
-            "No se encontró el ID del usuario. Por favor, inicia sesión nuevamente."
-          );
+    const userId = localStorage.getItem("id");
+    if (!userId) {
+      toastr.error("Debes iniciar sesión primero");
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        "https://rumipark-CamiMujica.pythonanywhere.com/vehiculos",
+        {
+          numero_placa: formData.numero_placa,
+          tipo_vehiculo: formData.tipo_vehiculo,
+          propietario: formData.propietario,
+          dni: formData.dni,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            id: userId,
+          },
         }
+      );
 
-        const response = await axios.get(
-          "https://rumipark-CamiMujica.pythonanywhere.com/registros",
-          {
-            headers: {
-              id: userId, // Asegúrate de que este userId sea el del usuario autenticado
-            },
-          }
-        );
-
-        const registros = response.data.registros || [];
-        const vehicleData = registros.map((registro) => ({
-          plate: registro.numero_placa,
-          status:
-            registro.fecha_salida === null || registro.hora_salida === null
-              ? "Entrada"
-              : "Salida",
-          date:
-            registro.fecha_salida === null
-              ? registro.fecha_entrada
-              : registro.fecha_salida,
-          time:
-            registro.hora_salida === null
-              ? registro.hora_entrada
-              : registro.hora_salida,
-        }));
-
-        setVehicles(vehicleData);
-        setIsLoading(false);
-        setError(null); // Limpiar errores previos si la solicitud es exitosa
-      } catch (error) {
-        console.error("Error al obtener los registros:", error);
-        const errorMessage = error.response
-          ? `Error al obtener los registros: ${
-              error.response.data.message || error.response.statusText
-            }`
-          : error.message ===
-            "No se encontró el ID del usuario. Por favor, inicia sesión nuevamente."
-          ? error.message
-          : "Error al obtener los registros. Verifica tu conexión o intenta nuevamente.";
-        setError(errorMessage);
-        setIsLoading(false);
+      if (response.status === 201) {
+        toastr.success("Vehículo registrado exitosamente");
+        onSuccess(); // Notificamos al componente padre
+        onClose(); // Cerramos el modal
       }
-    };
+    } catch (error) {
+      // Manejo de errores detallado
+      const errorResponse = error.response ? error.response.data : null;
+      const errorMessage =
+        errorResponse?.error || error.message || "Error desconocido";
+      console.error("Error detallado al registrar vehículo:", errorResponse);
+      toastr.error(`Hubo un error al registrar el vehículo: ${errorMessage}`);
+    }
+  };
 
-    // Llamada inicial
-    fetchRegistros();
+  // Maneja los cambios en los campos del formulario
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
 
-    // Actualización cada 1 segundo
-    const intervalId = setInterval(fetchRegistros, 1000);
-
-    // Limpiar intervalo cuando el componente se desmonte
-    return () => clearInterval(intervalId);
-  }, [userId]);
-
-  if (isLoading) {
-    return <div className="text-center p-4">Cargando datos...</div>;
-  }
-
-  if (error) {
-    return <div className="text-center p-4 text-red-500">{error}</div>;
-  }
+  // Si el modal no está abierto, no se renderiza
+  if (!isOpen) return null;
 
   return (
-    <div className="bg-white shadow-md rounded-lg p-6 mx-auto max-w-full overflow-x-auto">
-      <table className="table-auto w-full text-sm text-gray-700">
-        <thead>
-          <tr className="bg-blue-50 text-blue-800">
-            <th className="text-left py-2 px-4 border-b">
-              <i className="fas fa-car-side mr-2"></i>Placa
-            </th>
-            <th className="text-left py-2 px-4 border-b">
-              <i className="fas fa-info-circle mr-2"></i>Estado
-            </th>
-            <th className="text-left py-2 px-4 border-b">
-              <i className="fas fa-calendar-day mr-2"></i>Fecha
-            </th>
-            <th className="text-left py-2 px-4 border-b">
-              <i className="fas fa-clock mr-2"></i>Hora
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {vehicles.length > 0 ? (
-            vehicles.map((vehicle, index) => (
-              <tr
-                key={index}
-                className={`${
-                  index % 2 === 0 ? "bg-white" : "bg-blue-50"
-                } hover:bg-blue-200 transition-colors duration-300`}
-              >
-                <td className="py-2 px-4 border-b flex items-center break-words">
-                  <i className="fas fa-car text-blue-500 mr-2"></i>
-                  {vehicle.plate}
-                </td>
-                <td className="py-2 px-4 border-b">
-                  <span
-                    className={`px-3 py-1 rounded-md text-xs font-medium flex items-center ${
-                      vehicle.status === "Entrada"
-                        ? "bg-green-200 text-green-800"
-                        : "bg-orange-200 text-orange-800"
-                    }`}
-                  >
-                    <i
-                      className={`mr-1 ${
-                        vehicle.status === "Entrada"
-                          ? "fas fa-arrow-circle-down"
-                          : "fas fa-arrow-circle-up"
-                      }`}
-                    ></i>
-                    {vehicle.status}
-                  </span>
-                </td>
-                <td className="py-2 px-4 border-b flex items-center break-words">
-                  <i className="fas fa-calendar-alt text-blue-500 mr-2"></i>
-                  {vehicle.date}
-                </td>
-                <td className="py-2 px-4 border-b flex items-center break-words">
-                  <i className="fas fa-clock text-green-500 mr-2"></i>
-                  {vehicle.time}
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="4" className="text-center py-4 border-b">
-                No hay registros disponibles.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-[#6a97c1] text-white rounded-lg shadow-lg w-96 p-8 border-4 border-[#3a6e9f]">
+        <h2 className="text-2xl font-semibold text-center mb-6">
+          Registrar Nuevo Vehículo
+        </h2>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Número de Placa */}
+          <div className="relative">
+            <FontAwesomeIcon
+              icon={faPen}
+              className="absolute left-4 top-4"
+              style={{ color: "#1da4cf" }}
+            />
+            <input
+              type="text"
+              name="numero_placa"
+              value={formData.numero_placa}
+              onChange={handleChange}
+              placeholder="Número de Placa"
+              className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+              required
+              style={{ borderColor: "#1da4cf" }}
+            />
+          </div>
+
+          {/* Tipo de Vehículo */}
+          <div className="relative">
+            <FontAwesomeIcon
+              icon={faCar}
+              className="absolute left-4 top-4"
+              style={{ color: "#1da4cf" }}
+            />
+            <input
+              type="text"
+              name="tipo_vehiculo"
+              value={formData.tipo_vehiculo}
+              onChange={handleChange}
+              placeholder="Tipo de Vehículo"
+              className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+              required
+              style={{ borderColor: "#1da4cf" }}
+            />
+          </div>
+
+          {/* Propietario */}
+          <div className="relative">
+            <FontAwesomeIcon
+              icon={faPen}
+              className="absolute left-4 top-4"
+              style={{ color: "#1da4cf" }}
+            />
+            <input
+              type="text"
+              name="propietario"
+              value={formData.propietario}
+              onChange={handleChange}
+              placeholder="Propietario"
+              className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+              required
+              style={{ borderColor: "#1da4cf" }}
+            />
+          </div>
+
+          {/* DNI del Propietario */}
+          <div className="relative">
+            <FontAwesomeIcon
+              icon={faIdCard}
+              className="absolute left-4 top-4"
+              style={{ color: "#1da4cf" }}
+            />
+            <input
+              type="text"
+              name="dni"
+              value={formData.dni}
+              onChange={handleChange}
+              placeholder="DNI del Propietario"
+              className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+              required
+              style={{ borderColor: "#1da4cf" }}
+            />
+          </div>
+
+          {/* Botones */}
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-all"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-3 bg-[#3a6e9f] text-white rounded-lg hover:bg-[#2e5a7d] transition-all"
+            >
+              Registrar
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
-}
+};
 
-export default VehicleTable;
+export default NewVehicleModal;
