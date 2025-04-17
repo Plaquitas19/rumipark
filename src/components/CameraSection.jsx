@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+/* eslint-disable react-hooks/exhaustive-deps */
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import NewVehicleModal from "./NewVehicleModal";
 import "@fortawesome/fontawesome-free/css/all.css";
 import toastr from "toastr";
 import "toastr/build/toastr.min.css";
+import debounce from "lodash/debounce";
 
 const CameraSection = () => {
   const videoRef = useRef(null);
@@ -19,27 +21,128 @@ const CameraSection = () => {
   const [editablePlate, setEditablePlate] = useState("");
   const [blockedPlates, setBlockedPlates] = useState({}); // Para salidas recientes (2 minutos)
   const [recentEntries, setRecentEntries] = useState({}); // Para entradas recientes (3 minutos)
-  const [lastNotificationMessage, setLastNotificationMessage] = useState(""); // Para rastrear el último mensaje mostrado
-  const [isPlateDetected, setIsPlateDetected] = useState(false);
+  const [lastNotificationMessage, setLastNotificationMessage] = useState("");
   const readNotificationsRef = useRef(new Set());
+  const [imageUsage, setImageUsage] = useState({ processed: 0, limit: 0 }); // Estado para el contador de imágenes
+  const [isLoadingImageUsage, setIsLoadingImageUsage] = useState(false); // Estado para mostrar carga
+  const [isDetecting, setIsDetecting] = useState(false); // Estado para rastrear si hay una detección en curso
+
+  // Obtener el conteo de imágenes procesadas al cargar el componente
+  useEffect(() => {
+    const fetchImageUsage = async () => {
+      try {
+        setIsLoadingImageUsage(true);
+        const userId = localStorage.getItem("id");
+        if (!userId) {
+          console.error("No se encontró el ID del usuario en localStorage");
+          return;
+        }
+
+        const response = await fetch(
+          `https://rumipark-camimujica.pythonanywhere.com/imagenes_procesadas_total?id=${userId}`
+        );
+        const data = await response.json();
+
+        if (response.ok) {
+          setImageUsage({
+            processed: data.imagenes_procesadas_total || 0,
+            limit: data.limite_imagenes || 0,
+          });
+          if (
+            data.mensaje &&
+            data.mensaje.includes("Has alcanzado el límite")
+          ) {
+            showNotification(data.mensaje, "warning");
+          }
+        } else {
+          console.error("Error al obtener el conteo de imágenes:", data.error);
+          setImageUsage({ processed: 0, limit: 0 });
+          showNotification(
+            "Error al obtener el conteo de imágenes procesadas.",
+            "error"
+          );
+        }
+      } catch (err) {
+        console.error("Error al obtener el conteo de imágenes:", err);
+        setImageUsage({ processed: 0, limit: 0 });
+        showNotification(
+          "Error al obtener el conteo de imágenes procesadas.",
+          "error"
+        );
+      } finally {
+        setIsLoadingImageUsage(false);
+      }
+    };
+
+    fetchImageUsage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Actualizar el conteo de imágenes después de cada detección (debounced)
+  const updateImageUsage = useCallback(
+    debounce(async () => {
+      try {
+        setIsLoadingImageUsage(true);
+        const userId = localStorage.getItem("id");
+        if (!userId) {
+          console.error("No se encontró el ID del usuario en localStorage");
+          return;
+        }
+
+        const response = await fetch(
+          `https://rumipark-camimujica.pythonanywhere.com/imagenes_procesadas_total?id=${userId}`
+        );
+        const data = await response.json();
+
+        if (response.ok) {
+          setImageUsage({
+            processed: data.imagenes_procesadas_total || 0,
+            limit: data.limite_imagenes || 0,
+          });
+          if (
+            data.mensaje &&
+            data.mensaje.includes("Has alcanzado el límite")
+          ) {
+            showNotification(data.mensaje, "warning");
+          }
+        } else {
+          console.error(
+            "Error al actualizar el conteo de imágenes:",
+            data.error
+          );
+          setImageUsage({ processed: 0, limit: 0 });
+          showNotification(
+            "Error al actualizar el conteo de imágenes procesadas.",
+            "error"
+          );
+        }
+      } catch (err) {
+        console.error("Error al actualizar el conteo de imágenes:", err);
+        setImageUsage({ processed: 0, limit: 0 });
+        showNotification(
+          "Error al actualizar el conteo de imágenes procesadas.",
+          "error"
+        );
+      } finally {
+        setIsLoadingImageUsage(false);
+      }
+    }, 500),
+    []
+  );
 
   useEffect(() => {
     let detectionInterval;
-    if (isCameraActive) {
+    if (isCameraActive && !isDetecting) {
       detectionInterval = setInterval(() => {
         detectFromCamera();
       }, 2000);
-    } else {
-      clearInterval(detectionInterval);
     }
     return () => clearInterval(detectionInterval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCameraActive]);
+  }, [isCameraActive, isDetecting]);
 
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
-      // Limpiar blockedPlates (salidas)
       setBlockedPlates((prev) => {
         const updated = { ...prev };
         Object.keys(updated).forEach((plate) => {
@@ -49,7 +152,6 @@ const CameraSection = () => {
         });
         return updated;
       });
-      // Limpiar recentEntries (entradas)
       setRecentEntries((prev) => {
         const updated = { ...prev };
         Object.keys(updated).forEach((plate) => {
@@ -125,10 +227,9 @@ const CameraSection = () => {
   };
 
   const showNotification = (message, type) => {
-    // Solo mostrar la notificación si es diferente a la última mostrada
     if (message !== lastNotificationMessage) {
-      toastr.clear(); // Limpiar notificaciones anteriores
-      toastr[type](message, "", { timeOut: 0 }); // timeOut: 0 para que no desaparezca automáticamente
+      toastr.clear();
+      toastr[type](message, "", { timeOut: 10000 });
       setLastNotificationMessage(message);
 
       if (!readNotificationsRef.current.has(message)) {
@@ -167,114 +268,159 @@ const CameraSection = () => {
       showNotification("Usuario no autenticado", "error");
       return;
     }
+
     const formData = new FormData();
     formData.append("file", file);
     formData.append("id", userId);
+
+    // Marcar que hay una detección en curso
+    setIsDetecting(true);
+
     try {
       const response = await fetch(
-        "https://rumipark-CamiMujica.pythonanywhere.com/detectar_y_verificar_y_entrada",
+        "https://rumipark-camimujica.pythonanywhere.com/detectar_y_verificar_y_entrada",
         {
           method: "POST",
           body: formData,
         }
       );
+
       const data = await response.json();
+      console.log("Respuesta de /detectar_y_verificar_y_entrada:", data);
+
       if (response.ok && data.placa_detectada) {
         const normalizedPlate = normalizePlate(data.placa_detectada);
-        setDetectedPlate(normalizedPlate);
-        setPlateImage(`data:image/jpeg;base64,${data.placa_imagen}`);
-        setIsPlateDetected(true);
 
-        // Verificar si hay una entrada reciente (3 minutos) para esta placa
+        // Verificar si hay una entrada reciente (3 minutos) en el frontend
         if (recentEntries[normalizedPlate]) {
           showNotification(
-            `Entrada reciente para la placa ${normalizedPlate}. Debe esperar 3 minutos antes de registrar una nueva entrada.`,
+            `Entrada reciente para la placa ${normalizedPlate}. Debe esperar 3 minutos antes de registrar una nueva entrada o salida.`,
             "info"
           );
-          setIsPlateDetected(false);
           return;
         }
 
-        // Verificar si hay una salida reciente (2 minutos) para esta placa
+        // Verificar si hay una salida reciente (2 minutos) en el frontend
         if (blockedPlates[normalizedPlate]) {
           showNotification(
             `Salida reciente para la placa ${normalizedPlate}. Debe esperar 2 minutos antes de registrar una nueva entrada.`,
             "info"
           );
-          setIsPlateDetected(false);
           return;
         }
 
-        // Verificar si la placa está registrada
-        try {
-          const detailsResponse = await fetch(
-            `https://rumipark-CamiMujica.pythonanywhere.com/vehiculo/${normalizedPlate}?id=${userId}`
-          );
-          const detailsData = await detailsResponse.json();
-          if (detailsResponse.ok) {
-            setIsPlateRegistered(true);
-            setVehicleDetails(detailsData);
+        // Procesar respuesta del backend
+        if (data.estado === "Placa registrada") {
+          setIsPlateRegistered(true);
 
-            // Registrar entrada o salida según el estado
-            if (!data.entrada_registrada) {
-              showNotification("Entrada registrada.", "success");
-              // Registrar el tiempo de la entrada (3 minutos de bloqueo) solo para esta placa
-              setRecentEntries((prev) => ({
-                ...prev,
-                [normalizedPlate]: Date.now() + 3 * 60 * 1000, // 3 minutos
-              }));
-            } else {
-              await registerExit(normalizedPlate, userId);
-            }
-          } else {
-            setIsPlateRegistered(false);
-            setVehicleDetails(null);
+          if (!data.entrada_registrada) {
             showNotification(
-              "Placa no registrada. Por favor, registre el vehículo.",
-              "warning"
+              `Placa detectada y entrada registrada para la placa ${normalizedPlate}.`,
+              "success"
+            );
+            setRecentEntries((prev) => ({
+              ...prev,
+              [normalizedPlate]: Date.now() + 3 * 60 * 1000, // 3 minutos
+            }));
+            console.log("recentEntries después de entrada:", recentEntries);
+            await updateImageUsage(); // Actualizar el conteo de imágenes
+          } else {
+            showNotification(
+              `El vehículo ya tiene una entrada registrada. Verificando salida para la placa ${normalizedPlate}...`,
+              "info"
+            );
+            await registerExit(normalizedPlate, userId);
+          }
+
+          // Obtener detalles del vehículo
+          try {
+            const detailsResponse = await fetch(
+              `https://rumipark-camimujica.pythonanywhere.com/vehiculo/${normalizedPlate}?id=${userId}`
+            );
+            const detailsData = await detailsResponse.json();
+            if (detailsResponse.ok) {
+              setVehicleDetails(detailsData);
+            } else {
+              setVehicleDetails(null);
+              showNotification(
+                "No se pudieron obtener los detalles del vehículo.",
+                "error"
+              );
+            }
+          } catch (err) {
+            console.error("Error al obtener detalles del vehículo:", err);
+            showNotification(
+              "No se pudieron obtener los detalles del vehículo.",
+              "error"
             );
           }
-        } catch (err) {
-          console.error("Error al obtener detalles del vehículo:", err);
+        } else if (data.estado === "Placa no registrada") {
           setIsPlateRegistered(false);
-          setVehicleDetails(null);
           showNotification(
-            "No se pudieron obtener los detalles del vehículo.",
-            "error"
+            "Placa no registrada. Por favor, registre el vehículo.",
+            "warning"
           );
+        } else if (data.estado === "Salida reciente") {
+          setIsPlateRegistered(true);
+          showNotification(
+            `Salida reciente para la placa ${normalizedPlate}. Debe esperar 2 minutos antes de registrar una nueva entrada.`,
+            "info"
+          );
+          // Obtener detalles del vehículo para mostrarlos
+          try {
+            const detailsResponse = await fetch(
+              `https://rumipark-camimujica.pythonanywhere.com/vehiculo/${normalizedPlate}?id=${userId}`
+            );
+            const detailsData = await detailsResponse.json();
+            if (detailsResponse.ok) {
+              setVehicleDetails(detailsData);
+            } else {
+              setVehicleDetails(null);
+            }
+          } catch (err) {
+            console.error("Error al obtener detalles del vehículo:", err);
+            setVehicleDetails(null);
+          }
         }
+
+        setDetectedPlate(normalizedPlate);
+        setPlateImage(`data:image/jpeg;base64,${data.placa_imagen}`);
       } else {
-        setIsPlateDetected(false);
         setDetectedPlate("");
         setPlateImage(null);
         setIsPlateRegistered(null);
         setVehicleDetails(null);
-        showNotification(data.mensaje || "No se detectaron placas.", "error");
+        showNotification(
+          data.error || data.mensaje || "Error al procesar la imagen.",
+          "error"
+        );
       }
     } catch (err) {
-      setIsPlateDetected(false);
       setDetectedPlate("");
       setPlateImage(null);
       setIsPlateRegistered(null);
       setVehicleDetails(null);
-      showNotification("Error al procesar la imagen.", "error");
+      showNotification("Error al procesar la imagen: " + err.message, "error");
       console.error("Error al enviar la imagen:", err);
+    } finally {
+      // Marcar que la detección ha finalizado
+      setIsDetecting(false);
     }
   };
 
   const registerExit = async (plate, userId) => {
-    // Verificar si hay una entrada reciente (3 minutos) para esta placa
-    if (recentEntries[plate]) {
-      showNotification(
-        `Entrada reciente para la placa ${plate}. Debe esperar 3 minutos antes de registrar una salida.`,
-        "info"
-      );
-      return;
-    }
-
     try {
+      // Verificar si hay una entrada reciente (3 minutos) en el frontend
+      if (recentEntries[plate]) {
+        showNotification(
+          `Entrada reciente para la placa ${plate}. Debe esperar 3 minutos antes de registrar una salida.`,
+          "info"
+        );
+        return;
+      }
+
       const response = await fetch(
-        "https://rumipark-CamiMujica.pythonanywhere.com/salida",
+        "https://rumipark-camimujica.pythonanywhere.com/salida",
         {
           method: "POST",
           headers: {
@@ -286,31 +432,56 @@ const CameraSection = () => {
           }),
         }
       );
+
       const data = await response.json();
-      if (response.ok) {
+      console.log("Respuesta de /salida:", data);
+
+      // Verificar si la salida fue bloqueada por el límite de 3 minutos
+      if (
+        data.message &&
+        typeof data.message === "string" &&
+        data.message.includes("3 minutos")
+      ) {
+        showNotification(
+          `Entrada reciente para la placa ${plate}. Debe esperar 3 minutos antes de registrar una salida.`,
+          "info"
+        );
+        return;
+      }
+
+      // Si la respuesta es exitosa y no fue bloqueada, registrar la salida
+      if (response.ok && data.message === "Salida registrada exitosamente.") {
         setVehicleDetails(data.vehiculo);
-        showNotification("Salida registrada automáticamente.", "success");
-        // Registrar el tiempo de la salida (2 minutos de bloqueo) solo para esta placa
+        showNotification(
+          `Salida registrada para la placa ${plate}.`,
+          "success"
+        );
         setBlockedPlates((prev) => ({
           ...prev,
           [plate]: Date.now() + 2 * 60 * 1000, // 2 minutos
         }));
-        // Limpiar el bloqueo de entrada para esta placa
         setRecentEntries((prev) => {
           const updated = { ...prev };
           delete updated[plate];
           return updated;
         });
+        await updateImageUsage(); // Actualizar el conteo de imágenes
       } else {
+        // Manejar cualquier otro error
         showNotification(
-          `Error: ${data.message || "No se pudo registrar la salida."}`,
-          "warning"
+          `Error al registrar la salida: ${
+            data.error || data.message || "Error desconocido en el servidor"
+          }`,
+          "error"
         );
-        console.error("Respuesta de error de la API:", data);
       }
     } catch (err) {
-      showNotification("Error al intentar registrar la salida.", "error");
+      showNotification(
+        `Error al intentar registrar la salida: ${err.message}`,
+        "error"
+      );
       console.error("Error en el frontend:", err);
+      await updateImageUsage(); // Intentar actualizar el conteo de imágenes incluso si falla
     }
   };
 
@@ -327,6 +498,10 @@ const CameraSection = () => {
         "Debes activar la cámara para poder detectar la placa.",
         "error"
       );
+      return;
+    }
+    if (isDetecting) {
+      console.log("Detección en curso, omitiendo captura...");
       return;
     }
     const video = videoRef.current;
@@ -370,6 +545,26 @@ const CameraSection = () => {
         </div>
         <div className="w-full md:w-1/2 flex flex-col gap-6">
           <div className="p-4 bg-white rounded-lg shadow-lg">
+            {/* Contador de imágenes procesadas */}
+            <div className="text-center mb-4">
+              {isLoadingImageUsage ? (
+                <p className="text-lg font-semibold text-gray-500">
+                  Cargando...
+                </p>
+              ) : (
+                <>
+                  <p className="text-lg font-semibold text-gray-700">
+                    Placas procesadas: {imageUsage.processed}/{imageUsage.limit}
+                  </p>
+                  {imageUsage.processed >= imageUsage.limit &&
+                    imageUsage.limit !== 0 && (
+                      <p className="text-sm text-red-500">
+                        Has alcanzado el límite de imágenes de tu plan.
+                      </p>
+                    )}
+                </>
+              )}
+            </div>
             <div className="flex flex-col items-center gap-4">
               <div className="flex gap-4 justify-center">
                 <button
@@ -396,7 +591,7 @@ const CameraSection = () => {
               </div>
             </div>
             <div className="mt-6 text-center">
-              {isPlateDetected && plateImage && (
+              {plateImage && (
                 <div>
                   <p
                     className={`text-${
@@ -430,7 +625,7 @@ const CameraSection = () => {
                             const userId = localStorage.getItem("id");
                             try {
                               const response = await fetch(
-                                `https://rumipark-CamiMujica.pythonanywhere.com/vehiculo/${normalizedEditablePlate}?id=${userId}`
+                                `https://rumipark-camimujica.pythonanywhere.com/vehiculo/${normalizedEditablePlate}?id=${userId}`
                               );
                               if (!response.ok) {
                                 if (response.status === 404) {
