@@ -20,6 +20,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
   const formRef = useRef(null);
+  const silenceTimeoutRef = useRef(null);
 
   // Limpiar los campos al cerrar el modal
   const resetForm = () => {
@@ -29,6 +30,21 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       propietario: "",
       dni: "",
     });
+  };
+
+  // Verificar permisos del micrófono
+  const checkMicrophonePermission = async () => {
+    try {
+      const permission = await navigator.permissions.query({ name: "microphone" });
+      if (permission.state === "denied") {
+        toastr.error("Por favor, habilita el permiso del micrófono en tu dispositivo.");
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error("Error al verificar permisos del micrófono:", error);
+      return true; // Continuar, ya que no todos los navegadores soportan esta API
+    }
   };
 
   // Configurar el reconocimiento de voz
@@ -53,13 +69,14 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     recognition.continuous = true;
 
     recognition.onstart = () => {
+      console.log("Reconocimiento de voz iniciado");
       toastr.info("Micrófono activado. Di 'detener' o 'cancelar' para parar.");
     };
 
     recognition.onend = () => {
-      // Solo reiniciar si isListening es true y no se ha detenido manualmente
+      console.log("Reconocimiento detenido");
       if (isListening) {
-        console.log("Reconocimiento detenido, reiniciando...");
+        console.log("Reiniciando reconocimiento...");
         try {
           recognition.start();
         } catch (error) {
@@ -75,6 +92,11 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
         .toLowerCase()
         .trim();
       console.log("Texto reconocido:", transcript);
+
+      // Reiniciar el temporizador de silencio
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+      }
 
       // Comandos para detener el micrófono
       if (transcript.includes("detener")) {
@@ -104,76 +126,96 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       }
 
       // Procesar comandos para llenar los campos
-      const words = transcript.split(" ");
-      let field = words[0];
-      let valueStart = 1;
+      let field = null;
+      let value = "";
 
-      if (words.length > 2 && words[0] === "número" && words[1] === "de" && words[2] === "placa") {
+      if (transcript.startsWith("número de placa")) {
         field = "numero_placa";
-        valueStart = 3;
-      } else if (words.length > 2 && words[0] === "tipo" && words[1] === "de" && words[2] === "vehículo") {
+        value = transcript.replace("número de placa", "").trim();
+      } else if (transcript.startsWith("tipo de vehículo")) {
         field = "tipo_vehiculo";
-        valueStart = 3;
+        value = transcript.replace("tipo de vehículo", "").trim();
+      } else if (transcript.startsWith("propietario")) {
+        field = "propietario";
+        value = transcript.replace("propietario", "").trim();
+      } else if (transcript.startsWith("dni")) {
+        field = "dni";
+        value = transcript.replace("dni", "").trim();
       }
 
-      const value = words.slice(valueStart).join(" ").trim();
+      if (field && value) {
+        switch (field) {
+          case "numero_placa":
+            const placaValue = value.replace(/\s/g, "").toUpperCase();
+            setFormData((prev) => ({ ...prev, numero_placa: placaValue }));
+            toastr.info(`Número de placa establecido: ${placaValue}`);
+            break;
+          case "tipo_vehiculo":
+            const tipoCapitalized = value
+              .split(" ")
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(" ");
+            setFormData((prev) => ({ ...prev, tipo_vehiculo: tipoCapitalized }));
+            toastr.info(`Tipo de vehículo establecido: ${tipoCapitalized}`);
+            break;
+          case "propietario":
+            const nombreCapitalized = value
+              .split(" ")
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(" ");
+            setFormData((prev) => ({ ...prev, propietario: nombreCapitalized }));
+            toastr.info(`Propietario establecido: ${nombreCapitalized}`);
+            break;
+          case "dni":
+            const dniDigits = value.replace(/\s/g, "");
+            setFormData((prev) => ({ ...prev, dni: dniDigits }));
+            toastr.info(`DNI establecido: ${dniDigits}`);
+            break;
+        }
+      } else {
+        toastr.error(
+          "⚠️ Comando no reconocido. Usa: número de placa, tipo de vehículo, propietario, dni, guardar vehículo"
+        );
+      }
 
-      switch (field) {
-        case "numero_placa":
-          const placaValue = value.replace(/\s/g, "").toUpperCase();
-          setFormData((prev) => ({ ...prev, numero_placa: placaValue }));
-          toastr.info(`Número de placa establecido: ${placaValue}`);
-          break;
-        case "tipo_vehiculo":
-          const tipoCapitalized = value
-            .split(" ")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" ");
-          setFormData((prev) => ({ ...prev, tipo_vehiculo: tipoCapitalized }));
-          toastr.info(`Tipo de vehículo establecido: ${tipoCapitalized}`);
-          break;
-        case "propietario":
-          const nombreCapitalized = value
-            .split(" ")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" ");
-          setFormData((prev) => ({ ...prev, propietario: nombreCapitalized }));
-          toastr.info(`Propietario establecido: ${nombreCapitalized}`);
-          break;
-        case "dni":
-          const dniDigits = value.replace(/\s/g, "");
-          setFormData((prev) => ({ ...prev, dni: dniDigits }));
-          toastr.info(`DNI establecido: ${dniDigits}`);
-          break;
-        default:
-          toastr.error(
-            "⚠️ Campo no reconocido. Usa: número de placa, tipo de vehículo, propietario, dni, guardar vehículo"
-          );
+      // Forzar reinicio inmediato en móviles para mantener la continuidad
+      if (isListening) {
+        try {
+          recognition.stop();
+          setTimeout(() => {
+            if (isListening) {
+              recognition.start();
+            }
+          }, 100);
+        } catch (error) {
+          console.error("Error al reiniciar tras resultado:", error);
+        }
       }
     };
 
     recognition.onerror = (event) => {
       console.error("Error en el reconocimiento de voz:", event.error);
       if (event.error === "no-speech") {
-        // Silencio detectado, reiniciar si sigue escuchando
+        console.log("No se detectó voz, programando reinicio...");
         if (isListening) {
-          console.log("No se detectó voz, intentando reiniciar...");
-          try {
-            recognition.start();
-          } catch (error) {
-            console.error("Error al reiniciar tras no-speech:", error);
-          }
+          silenceTimeoutRef.current = setTimeout(() => {
+            try {
+              recognition.start();
+            } catch (error) {
+              console.error("Error al reiniciar tras no-speech:", error);
+            }
+          }, 2000);
         }
       } else if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         toastr.error("Permiso para usar el micrófono denegado.");
         setIsListening(false);
-      } else if (event.error === "aborted") {
-        console.log("Reconocimiento abortado, intentando reiniciar...");
+      } else if (event.error === "aborted" || event.error === "network") {
+        console.log("Reconocimiento abortado o error de red, intentando reiniciar...");
         if (isListening) {
           try {
             recognition.start();
           } catch (error) {
-            console.error("Error al reiniciar tras abort:", error);
+            console.error("Error al reiniciar tras error:", error);
           }
         }
       } else {
@@ -188,17 +230,29 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       }
     };
 
+    recognition.onspeechstart = () => {
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+      }
+    };
+
     recognitionRef.current = recognition;
 
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+      }
     };
   }, [isListening, onClose]);
 
-  const startListening = () => {
+  const startListening = async () => {
     if (recognitionRef.current && !isListening) {
+      const hasPermission = await checkMicrophonePermission();
+      if (!hasPermission) return;
+
       setIsListening(true);
       try {
         recognitionRef.current.start();
@@ -215,6 +269,9 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     if (recognitionRef.current && isListening) {
       setIsListening(false);
       recognitionRef.current.stop();
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+      }
       console.log("Reconocimiento de voz desactivado");
     }
   };
