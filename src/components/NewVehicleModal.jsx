@@ -43,7 +43,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       return true;
     } catch (error) {
       console.error("Error al verificar permisos del micrófono:", error);
-      return true; // Continuar, ya que no todos los navegadores soportan esta API
+      return true;
     }
   };
 
@@ -70,7 +70,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
 
     recognition.onstart = () => {
       console.log("Reconocimiento de voz iniciado");
-      toastr.info("Micrófono activado. Di 'detener' o 'cancelar' para parar.");
+      toastr.info("Micrófono activado. Habla para llenar los campos.");
     };
 
     recognition.onend = () => {
@@ -144,6 +144,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       }
 
       if (field && value) {
+        // eslint-disable-next-line default-case
         switch (field) {
           case "numero_placa":
             const placaValue = value.replace(/\s/g, "").toUpperCase();
@@ -177,20 +178,6 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
           "⚠️ Comando no reconocido. Usa: número de placa, tipo de vehículo, propietario, dni, guardar vehículo"
         );
       }
-
-      // Forzar reinicio inmediato en móviles para mantener la continuidad
-      if (isListening) {
-        try {
-          recognition.stop();
-          setTimeout(() => {
-            if (isListening) {
-              recognition.start();
-            }
-          }, 100);
-        } catch (error) {
-          console.error("Error al reiniciar tras resultado:", error);
-        }
-      }
     };
 
     recognition.onerror = (event) => {
@@ -204,7 +191,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
             } catch (error) {
               console.error("Error al reiniciar tras no-speech:", error);
             }
-          }, 2000);
+          }, 1500); // Reducido a 1.5 segundos para mayor fluidez
         }
       } else if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         toastr.error("Permiso para usar el micrófono denegado.");
@@ -246,6 +233,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
         clearTimeout(silenceTimeoutRef.current);
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isListening, onClose]);
 
   const startListening = async () => {
