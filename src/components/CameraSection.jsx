@@ -19,15 +19,14 @@ const CameraSection = () => {
   const [vehicleDetails, setVehicleDetails] = useState(null);
   const [isEditingPlate, setIsEditingPlate] = useState(false);
   const [editablePlate, setEditablePlate] = useState("");
-  const [blockedPlates, setBlockedPlates] = useState({}); // Para salidas recientes (2 minutos)
-  const [recentEntries, setRecentEntries] = useState({}); // Para entradas recientes (3 minutos)
+  const [blockedPlates, setBlockedPlates] = useState({});
+  const [recentEntries, setRecentEntries] = useState({});
   const [lastNotificationMessage, setLastNotificationMessage] = useState("");
   const readNotificationsRef = useRef(new Set());
-  const [imageUsage, setImageUsage] = useState({ processed: 0, limit: 0 }); // Estado para el contador de imágenes
-  const [isLoadingImageUsage, setIsLoadingImageUsage] = useState(false); // Estado para mostrar carga
-  const [isDetecting, setIsDetecting] = useState(false); // Estado para rastrear si hay una detección en curso
+  const [imageUsage, setImageUsage] = useState({ processed: 0, limit: 0 });
+  const [isLoadingImageUsage, setIsLoadingImageUsage] = useState(false);
+  const [isDetecting, setIsDetecting] = useState(false);
 
-  // Obtener el conteo de imágenes procesadas al cargar el componente
   useEffect(() => {
     const fetchImageUsage = async () => {
       try {
@@ -75,10 +74,8 @@ const CameraSection = () => {
     };
 
     fetchImageUsage();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Actualizar el conteo de imágenes después de cada detección (debounced)
   const updateImageUsage = useCallback(
     debounce(async () => {
       try {
@@ -191,17 +188,32 @@ const CameraSection = () => {
       const videoDevices = devices.filter(
         (device) => device.kind === "videoinput"
       );
-      let backCamera = videoDevices.find((device) =>
-        device.label.toLowerCase().includes("back")
-      );
-      const camera =
-        backCamera ||
-        videoDevices.find((device) => device.kind === "videoinput");
-      if (!camera) {
+      if (!videoDevices.length) {
         throw new Error("No hay cámaras disponibles.");
       }
+
+      // Detectar si es un dispositivo móvil
+      const isMobile = /Mobi|Android|iPhone|iPad/.test(navigator.userAgent);
+      let selectedCamera;
+
+      if (isMobile) {
+        // Priorizar cámara trasera en dispositivos móviles
+        selectedCamera = videoDevices.find((device) =>
+          device.label.toLowerCase().includes("back") ||
+          device.label.toLowerCase().includes("rear") ||
+          device.label.toLowerCase().includes("environment")
+        ) || videoDevices[0]; // Fallback a cualquier cámara si no hay trasera
+      } else {
+        // Usar la cámara predeterminada en desktops/laptops
+        selectedCamera = videoDevices[0];
+      }
+
+      if (!selectedCamera) {
+        throw new Error("No se pudo seleccionar una cámara.");
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: camera.deviceId },
+        video: { deviceId: selectedCamera.deviceId },
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -273,7 +285,6 @@ const CameraSection = () => {
     formData.append("file", file);
     formData.append("id", userId);
 
-    // Marcar que hay una detección en curso
     setIsDetecting(true);
 
     try {
@@ -291,7 +302,6 @@ const CameraSection = () => {
       if (response.ok && data.placa_detectada) {
         const normalizedPlate = normalizePlate(data.placa_detectada);
 
-        // Verificar si hay una entrada reciente (3 minutos) en el frontend
         if (recentEntries[normalizedPlate]) {
           showNotification(
             `Entrada reciente para la placa ${normalizedPlate}. Debe esperar 3 minutos antes de registrar una nueva entrada o salida.`,
@@ -300,7 +310,6 @@ const CameraSection = () => {
           return;
         }
 
-        // Verificar si hay una salida reciente (2 minutos) en el frontend
         if (blockedPlates[normalizedPlate]) {
           showNotification(
             `Salida reciente para la placa ${normalizedPlate}. Debe esperar 2 minutos antes de registrar una nueva entrada.`,
@@ -309,7 +318,6 @@ const CameraSection = () => {
           return;
         }
 
-        // Procesar respuesta del backend
         if (data.estado === "Placa registrada") {
           setIsPlateRegistered(true);
 
@@ -320,10 +328,10 @@ const CameraSection = () => {
             );
             setRecentEntries((prev) => ({
               ...prev,
-              [normalizedPlate]: Date.now() + 3 * 60 * 1000, // 3 minutos
+              [normalizedPlate]: Date.now() + 3 * 60 * 1000,
             }));
             console.log("recentEntries después de entrada:", recentEntries);
-            await updateImageUsage(); // Actualizar el conteo de imágenes
+            await updateImageUsage();
           } else {
             showNotification(
               `El vehículo ya tiene una entrada registrada. Verificando salida para la placa ${normalizedPlate}...`,
@@ -332,7 +340,6 @@ const CameraSection = () => {
             await registerExit(normalizedPlate, userId);
           }
 
-          // Obtener detalles del vehículo
           try {
             const detailsResponse = await fetch(
               `https://rumipark-camimujica.pythonanywhere.com/vehiculo/${normalizedPlate}?id=${userId}`
@@ -366,7 +373,6 @@ const CameraSection = () => {
             `Salida reciente para la placa ${normalizedPlate}. Debe esperar 2 minutos antes de registrar una nueva entrada.`,
             "info"
           );
-          // Obtener detalles del vehículo para mostrarlos
           try {
             const detailsResponse = await fetch(
               `https://rumipark-camimujica.pythonanywhere.com/vehiculo/${normalizedPlate}?id=${userId}`
@@ -403,14 +409,12 @@ const CameraSection = () => {
       showNotification("Error al procesar la imagen: " + err.message, "error");
       console.error("Error al enviar la imagen:", err);
     } finally {
-      // Marcar que la detección ha finalizado
       setIsDetecting(false);
     }
   };
 
   const registerExit = async (plate, userId) => {
     try {
-      // Verificar si hay una entrada reciente (3 minutos) en el frontend
       if (recentEntries[plate]) {
         showNotification(
           `Entrada reciente para la placa ${plate}. Debe esperar 3 minutos antes de registrar una salida.`,
@@ -436,7 +440,6 @@ const CameraSection = () => {
       const data = await response.json();
       console.log("Respuesta de /salida:", data);
 
-      // Verificar si la salida fue bloqueada por el límite de 3 minutos
       if (
         data.message &&
         typeof data.message === "string" &&
@@ -449,7 +452,6 @@ const CameraSection = () => {
         return;
       }
 
-      // Si la respuesta es exitosa y no fue bloqueada, registrar la salida
       if (response.ok && data.message === "Salida registrada exitosamente.") {
         setVehicleDetails(data.vehiculo);
         showNotification(
@@ -458,16 +460,15 @@ const CameraSection = () => {
         );
         setBlockedPlates((prev) => ({
           ...prev,
-          [plate]: Date.now() + 2 * 60 * 1000, // 2 minutos
+          [plate]: Date.now() + 2 * 60 * 1000,
         }));
         setRecentEntries((prev) => {
           const updated = { ...prev };
           delete updated[plate];
           return updated;
         });
-        await updateImageUsage(); // Actualizar el conteo de imágenes
+        await updateImageUsage();
       } else {
-        // Manejar cualquier otro error
         showNotification(
           `Error al registrar la salida: ${
             data.error || data.message || "Error desconocido en el servidor"
@@ -481,7 +482,7 @@ const CameraSection = () => {
         "error"
       );
       console.error("Error en el frontend:", err);
-      await updateImageUsage(); // Intentar actualizar el conteo de imágenes incluso si falla
+      await updateImageUsage();
     }
   };
 
@@ -545,7 +546,6 @@ const CameraSection = () => {
         </div>
         <div className="w-full md:w-1/2 flex flex-col gap-6">
           <div className="p-4 bg-white rounded-lg shadow-lg">
-            {/* Contador de imágenes procesadas */}
             <div className="text-center mb-4">
               {isLoadingImageUsage ? (
                 <p className="text-lg font-semibold text-gray-500">
