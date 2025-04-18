@@ -71,6 +71,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     recognition.lang = "es-ES";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
+    recognition.continuous = true;
 
     // Variable para controlar el reinicio
     let restarting = false;
