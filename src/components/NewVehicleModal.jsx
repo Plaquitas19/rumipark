@@ -77,13 +77,18 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       console.log("Reconocimiento detenido");
       if (isListening) {
         console.log("Reiniciando reconocimiento automáticamente...");
-        try {
-          recognition.start();
-        } catch (error) {
-          console.error("Error al reiniciar reconocimiento:", error.message);
-          setIsListening(false);
-          toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
-        }
+        setTimeout(() => {
+          try {
+            if (isListening) {
+              recognition.start();
+              console.log("Reinicio exitoso");
+            }
+          } catch (error) {
+            console.error("Error al reiniciar reconocimiento:", error.message);
+            setIsListening(false);
+            toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
+          }
+        }, 50); // Retraso mínimo para evitar errores de "micrófono ocupado"
       } else {
         console.log("Reconocimiento detenido intencionalmente");
       }
@@ -195,7 +200,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
               setIsListening(false);
               toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
             }
-          }, 1000); // Reducido a 1 segundo para mayor fluidez
+          }, 800); // Reducido a 0.8 segundos para mayor fluidez
         }
       } else if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         console.error("Permiso del micrófono denegado");
@@ -204,27 +209,35 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       } else if (event.error === "aborted" || event.error === "network") {
         console.log("Reconocimiento abortado o error de red, intentando reiniciar...");
         if (isListening) {
-          try {
-            recognition.start();
-            console.log("Reinicio tras error exitoso");
-          } catch (error) {
-            console.error("Error al reiniciar tras error:", error.message);
-            setIsListening(false);
-            toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
-          }
+          setTimeout(() => {
+            try {
+              if (isListening) {
+                recognition.start();
+                console.log("Reinicio tras error exitoso");
+              }
+            } catch (error) {
+              console.error("Error al reiniciar tras error:", error.message);
+              setIsListening(false);
+              toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
+            }
+          }, 50);
         }
       } else {
         console.error("Error desconocido:", event.error);
         toastr.error(`Error en el reconocimiento de voz: ${event.error}`);
         if (isListening) {
-          try {
-            recognition.start();
-            console.log("Reinicio tras error desconocido exitoso");
-          } catch (error) {
-            console.error("Error al reiniciar tras error desconocido:", error.message);
-            setIsListening(false);
-            toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
-          }
+          setTimeout(() => {
+            try {
+              if (isListening) {
+                recognition.start();
+                console.log("Reinicio tras error desconocido exitoso");
+              }
+            } catch (error) {
+              console.error("Error al reiniciar tras error desconocido:", error.message);
+              setIsListening(false);
+              toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
+            }
+          }, 50);
         }
       }
     };
