@@ -20,6 +20,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
   const formRef = useRef(null);
+  const restartTimeoutRef = useRef(null); // Referencia para manejar el timeout de reinicio
 
   // Detectar si el dispositivo es móvil
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
@@ -45,7 +46,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
 
     const recognition = new SpeechRecognition();
     recognition.continuous = true; // Mantener reconocimiento activo
-    recognition.interimResults = true; // Capturar resultados parciales para mejor compatibilidad móvil
+    recognition.interimResults = true; // Capturar resultados parciales para mejor compatibilidad
     recognition.lang = "es-ES";
 
     recognition.onresult = (event) => {
@@ -116,38 +117,27 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       console.error("Error en el reconocimiento de voz:", event.error);
       if (event.error === "no-speech") {
         console.log("No se detectó voz, intentando reiniciar...");
-        if (isListening && !isMobile) {
-          recognition.start(); // Reiniciar solo en no móviles
-        } else if (isMobile) {
-          toastr.info("Toca el botón del micrófono para continuar escuchando.");
-          setIsListening(false);
+        if (isListening) {
+          restartRecognition(); // Intentar reiniciar en todos los dispositivos
         }
       } else if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         toastr.error("Permiso para usar el micrófono denegado. Activa el micrófono manualmente.");
         setIsListening(false);
+        clearTimeout(restartTimeoutRef.current);
       } else {
+        console.error(`Error desconocido: ${event.error}`);
         toastr.error(`Error en el reconocimiento de voz: ${event.error}`);
         setIsListening(false);
+        clearTimeout(restartTimeoutRef.current);
       }
     };
 
     recognition.onend = () => {
       console.log(`Reconocimiento finalizado. isListening: ${isListening}, Mobile: ${isMobile}`);
       if (isListening) {
-        if (isMobile) {
-          // En móviles, no reiniciamos automáticamente para evitar bloqueos
-          toastr.info("Toca el botón del micrófono para continuar escuchando.");
-          setIsListening(false);
-        } else {
-          try {
-            console.log("Reiniciando reconocimiento...");
-            recognition.start();
-          } catch (error) {
-            console.error("Error al reiniciar reconocimiento:", error);
-            toastr.error("No se pudo reiniciar el micrófono. Toca el botón para reactivarlo.");
-            setIsListening(false);
-          }
-        }
+        restartRecognition(); // Intentar reiniciar en todos los dispositivos
+      } else {
+        console.log("No se reinicia porque isListening es false.");
       }
     };
 
@@ -164,8 +154,28 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
+      clearTimeout(restartTimeoutRef.current);
     };
   }, [isListening, onClose, isMobile, isSafari]);
+
+  // Función para reiniciar el reconocimiento con un pequeño retraso
+  const restartRecognition = () => {
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+    }
+    restartTimeoutRef.current = setTimeout(() => {
+      if (isListening && recognitionRef.current) {
+        try {
+          console.log("Reiniciando reconocimiento...");
+          recognitionRef.current.start();
+        } catch (error) {
+          console.error("Error al reiniciar reconocimiento:", error);
+          toastr.error("No se pudo reiniciar el micrófono. Toca el botón para reactivarlo.");
+          setIsListening(false);
+        }
+      }
+    }, 100); // Retraso de 100ms para evitar conflictos
+  };
 
   const startListening = () => {
     if (recognitionRef.current && !isListening) {
@@ -179,6 +189,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     if (recognitionRef.current && isListening) {
       setIsListening(false);
       recognitionRef.current.stop();
+      clearTimeout(restartTimeoutRef.current);
       toastr.info("Micrófono desactivado");
     }
   };
@@ -251,8 +262,6 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
           <h2 className="text-2xl font-semibold text-center">
             Registrar Nuevo Vehículo
           </h2>
-          
-          
           <button
             onClick={handleToggleListening}
             className={`p-2 rounded-full ${
