@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import toastr from "toastr";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCar,
@@ -38,9 +37,10 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
 
   // Configurar el reconocimiento de voz
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      toastr.error("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.");
+      console.error("El navegador no soporta la API de reconocimiento de voz.");
       return;
     }
 
@@ -50,7 +50,9 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     recognition.lang = "es-ES";
 
     recognition.onresult = (event) => {
-      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
+      const transcript = event.results[event.results.length - 1][0].transcript
+        .toLowerCase()
+        .trim();
       console.log("Texto reconocido:", transcript);
 
       // Comandos para desactivar el micrófono
@@ -64,7 +66,6 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
         stopListening();
         resetForm();
         onClose();
-        toastr.info("Formulario cancelado");
         return;
       }
 
@@ -72,18 +73,22 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       if (transcript.includes("registrar")) {
         stopListening();
         if (formRef.current) {
-          formRef.current.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+          formRef.current.dispatchEvent(
+            new Event("submit", { cancelable: true, bubbles: true })
+          );
         }
         return;
       }
 
       // Procesar comandos para llenar los campos
       if (transcript.includes("número de placa")) {
-        const placaMatch = transcript.match(/número de placa\s+([a-z0-9\s-]+)/i);
+        const placaMatch = transcript.match(
+          /número de placa\s+([a-z0-9\s-]+)/i
+        );
         if (placaMatch && placaMatch[1]) {
           const placa = placaMatch[1].replace(/\s/g, "").toUpperCase();
           setFormData((prev) => ({ ...prev, numero_placa: placa }));
-          toastr.info(`Número de placa establecido: ${placa}`);
+          console.log(`Número de placa establecido: ${placa}`);
         }
       } else if (transcript.includes("tipo de vehículo")) {
         const tipoMatch = transcript.match(/tipo de vehículo\s+([a-z\s]+)/i);
@@ -91,7 +96,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
           const tipo = tipoMatch[1].trim();
           const tipoCapitalized = tipo.charAt(0).toUpperCase() + tipo.slice(1);
           setFormData((prev) => ({ ...prev, tipo_vehiculo: tipoCapitalized }));
-          toastr.info(`Tipo de vehículo establecido: ${tipoCapitalized}`);
+          console.log(`Tipo de vehículo establecido: ${tipoCapitalized}`);
         }
       } else if (transcript.includes("propietario")) {
         const propietarioMatch = transcript.match(/propietario\s+([a-z\s]+)/i);
@@ -102,13 +107,13 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(" ");
           setFormData((prev) => ({ ...prev, propietario: nombreCapitalized }));
-          toastr.info(`Propietario establecido: ${nombreCapitalized}`);
+          console.log(`Propietario establecido: ${nombreCapitalized}`);
         }
       } else if (transcript.includes("dni")) {
         const dniMatch = transcript.match(/dni\s+([0-9]+)/i);
         if (dniMatch && dniMatch[1]) {
           setFormData((prev) => ({ ...prev, dni: dniMatch[1] }));
-          toastr.info(`DNI establecido: ${dniMatch[1]}`);
+          console.log(`DNI establecido: ${dniMatch[1]}`);
         }
       }
     };
@@ -118,24 +123,28 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       if (event.error === "no-speech") {
         console.log("No se detectó voz, intentando reiniciar...");
         if (isListening) {
-          restartRecognition(); // Intentar reiniciar en todos los dispositivos
+          restartRecognition();
         }
-      } else if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        toastr.error("Permiso para usar el micrófono denegado. Activa el micrófono manualmente.");
+      } else if (
+        event.error === "not-allowed" ||
+        event.error === "service-not-allowed"
+      ) {
+        console.error("Permiso para usar el micrófono denegado.");
         setIsListening(false);
         clearTimeout(restartTimeoutRef.current);
       } else {
         console.error(`Error desconocido: ${event.error}`);
-        toastr.error(`Error en el reconocimiento de voz: ${event.error}`);
         setIsListening(false);
         clearTimeout(restartTimeoutRef.current);
       }
     };
 
     recognition.onend = () => {
-      console.log(`Reconocimiento finalizado. isListening: ${isListening}, Mobile: ${isMobile}`);
+      console.log(
+        `Reconocimiento finalizado. isListening: ${isListening}, Mobile: ${isMobile}`
+      );
       if (isListening) {
-        restartRecognition(); // Intentar reiniciar en todos los dispositivos
+        restartRecognition();
       } else {
         console.log("No se reinicia porque isListening es false.");
       }
@@ -143,19 +152,13 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
 
     recognitionRef.current = recognition;
 
-    // Advertencia para usuarios de Safari en móviles
-    if (isMobile && isSafari) {
-      toastr.warning(
-        "El reconocimiento de voz continuo puede no funcionar bien en Safari móvil. Usa Chrome para una mejor experiencia."
-      );
-    }
-
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
       clearTimeout(restartTimeoutRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isListening, onClose, isMobile, isSafari]);
 
   // Función para reiniciar el reconocimiento con un pequeño retraso
@@ -170,7 +173,6 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
           recognitionRef.current.start();
         } catch (error) {
           console.error("Error al reiniciar reconocimiento:", error);
-          toastr.error("No se pudo reiniciar el micrófono. Toca el botón para reactivarlo.");
           setIsListening(false);
         }
       }
@@ -181,7 +183,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     if (recognitionRef.current && !isListening) {
       setIsListening(true);
       recognitionRef.current.start();
-      toastr.info("Micrófono activado. Di 'desactivar micrófono' o haz clic para detener.");
+      console.log("Micrófono activado.");
     }
   };
 
@@ -190,7 +192,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       setIsListening(false);
       recognitionRef.current.stop();
       clearTimeout(restartTimeoutRef.current);
-      toastr.info("Micrófono desactivado");
+      console.log("Micrófono desactivado.");
     }
   };
 
@@ -206,7 +208,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     e.preventDefault();
     const userId = localStorage.getItem("id");
     if (!userId) {
-      toastr.error("Debes iniciar sesión primero");
+      console.error("Debes iniciar sesión primero.");
       return;
     }
 
@@ -228,17 +230,17 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       );
 
       if (response.status === 201) {
-        toastr.success("Vehículo registrado exitosamente");
+        console.log("Vehículo registrado exitosamente.");
         onSuccess();
         resetForm();
         onClose();
       }
     } catch (error) {
       const errorResponse = error.response ? error.response.data : null;
+      // eslint-disable-next-line no-unused-vars
       const errorMessage =
         errorResponse?.error || error.message || "Error desconocido";
       console.error("Error al registrar vehículo:", errorResponse);
-      toastr.error(`Hubo un error al registrar el vehículo: ${errorMessage}`);
     }
   };
 
@@ -269,7 +271,9 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
             } text-white hover:bg-opacity-80 transition-colors`}
             title={isListening ? "Desactivar micrófono" : "Activar micrófono"}
           >
-            <FontAwesomeIcon icon={isListening ? faMicrophoneSlash : faMicrophone} />
+            <FontAwesomeIcon
+              icon={isListening ? faMicrophoneSlash : faMicrophone}
+            />
           </button>
         </div>
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
