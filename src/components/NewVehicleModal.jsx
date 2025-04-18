@@ -21,6 +21,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
   const recognitionRef = useRef(null);
   const formRef = useRef(null);
   const silenceTimeoutRef = useRef(null);
+  const restartAttemptsRef = useRef(0);
 
   // Limpiar los campos al cerrar el modal
   const resetForm = () => {
@@ -35,15 +36,19 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
   // Verificar permisos del micrófono
   const checkMicrophonePermission = async () => {
     try {
-      const permission = await navigator.permissions.query({ name: "microphone" });
+      const permission = await navigator.permissions.query({
+        name: "microphone",
+      });
       if (permission.state === "denied") {
-        toastr.error("Por favor, habilita el permiso del micrófono en tu dispositivo.");
+        toastr.error(
+          "Por favor, habilita el permiso del micrófono en tu dispositivo."
+        );
         return false;
       }
       return true;
     } catch (error) {
       console.error("Error al verificar permisos del micrófono:", error);
-      return true; // Continuar si la API de permisos no está soportada
+      return true;
     }
   };
 
@@ -66,31 +71,41 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     recognition.lang = "es-ES";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.continuous = true;
+
+    // Variable para controlar el reinicio
+    let restarting = false;
 
     recognition.onstart = () => {
       console.log("Reconocimiento de voz iniciado");
-      toastr.info("Micrófono activado. Habla para llenar los campos.");
+      restartAttemptsRef.current = 0;
+      restarting = false;
+      toastr.info("Micrófono activado. Habla para llenar los campos. Di 'detener' para apagar.");
     };
 
     recognition.onend = () => {
       console.log("Reconocimiento detenido");
-      if (isListening) {
-        console.log("Reiniciando reconocimiento automáticamente...");
+      if (isListening && !restarting) {
+        console.log("Reiniciando reconocimiento...");
+        restarting = true;
+        restartAttemptsRef.current += 1;
+        
+        // Si hay muchos intentos fallidos, detener
+        if (restartAttemptsRef.current > 5) {
+          toastr.error("Demasiados intentos fallidos. Reinicia el micrófono manualmente.");
+          setIsListening(false);
+          return;
+        }
+
         setTimeout(() => {
           try {
-            if (isListening) {
-              recognition.start();
-              console.log("Reinicio exitoso");
-            }
+            recognition.start();
           } catch (error) {
-            console.error("Error al reiniciar reconocimiento:", error.message);
-            setIsListening(false);
-            toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
+            console.error("Error al reiniciar reconocimiento:", error);
+            if (isListening) {
+              setTimeout(() => recognition.start(), 500);
+            }
           }
-        }, 50); // Retraso mínimo para evitar errores de "micrófono ocupado"
-      } else {
-        console.log("Reconocimiento detenido intencionalmente");
+        }, 300);
       }
     };
 
@@ -100,10 +115,8 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
         .trim();
       console.log("Texto reconocido:", transcript);
 
-      // Reiniciar el temporizador de silencio
-      if (silenceTimeoutRef.current) {
-        clearTimeout(silenceTimeoutRef.current);
-      }
+      // Reiniciar el contador de intentos al recibir voz
+      restartAttemptsRef.current = 0;
 
       // Comandos para detener el micrófono
       if (transcript.includes("detener")) {
@@ -122,7 +135,10 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       }
 
       // Comando para registrar
-      if (transcript.includes("registrar") || transcript.includes("guardar vehículo")) {
+      if (
+        transcript.includes("registrar") ||
+        transcript.includes("guardar vehículo")
+      ) {
         stopListening();
         if (formRef.current) {
           formRef.current.dispatchEvent(
@@ -151,6 +167,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       }
 
       if (field && value) {
+        // eslint-disable-next-line default-case
         switch (field) {
           case "numero_placa":
             const placaValue = value.replace(/\s/g, "").toUpperCase();
@@ -162,7 +179,10 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
               .split(" ")
               .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
               .join(" ");
-            setFormData((prev) => ({ ...prev, tipo_vehiculo: tipoCapitalized }));
+            setFormData((prev) => ({
+              ...prev,
+              tipo_vehiculo: tipoCapitalized,
+            }));
             toastr.info(`Tipo de vehículo establecido: ${tipoCapitalized}`);
             break;
           case "propietario":
@@ -170,7 +190,10 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
               .split(" ")
               .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
               .join(" ");
-            setFormData((prev) => ({ ...prev, propietario: nombreCapitalized }));
+            setFormData((prev) => ({
+              ...prev,
+              propietario: nombreCapitalized,
+            }));
             toastr.info(`Propietario establecido: ${nombreCapitalized}`);
             break;
           case "dni":
@@ -189,77 +212,49 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     recognition.onerror = (event) => {
       console.error("Error en el reconocimiento de voz:", event.error);
       if (event.error === "no-speech") {
-        console.log("No se detectó voz, programando reinicio...");
+        // No hacer nada, se reiniciará automáticamente
+      } else if (
+        event.error === "not-allowed" ||
+        event.error === "service-not-allowed"
+      ) {
+        toastr.error("Permiso para usar el micrófono denegado.");
+        setIsListening(false);
+      } else {
+        toastr.error(`Error en el reconocimiento de voz: ${event.error}`);
+        // Intentar reiniciar después de un error
         if (isListening) {
-          silenceTimeoutRef.current = setTimeout(() => {
+          setTimeout(() => {
             try {
               recognition.start();
-              console.log("Reinicio tras no-speech exitoso");
             } catch (error) {
-              console.error("Error al reiniciar tras no-speech:", error.message);
-              setIsListening(false);
-              toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
+              console.error("Error al reiniciar tras error:", error);
             }
-          }, 800); // Reducido a 0.8 segundos para mayor fluidez
+          }, 500);
         }
-      } else if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        console.error("Permiso del micrófono denegado");
-        toastr.error("Permiso para usar el micrófono denegado. Habilítalo en la configuración.");
-        setIsListening(false);
-      } else if (event.error === "aborted" || event.error === "network") {
-        console.log("Reconocimiento abortado o error de red, intentando reiniciar...");
-        if (isListening) {
-          setTimeout(() => {
-            try {
-              if (isListening) {
-                recognition.start();
-                console.log("Reinicio tras error exitoso");
-              }
-            } catch (error) {
-              console.error("Error al reiniciar tras error:", error.message);
-              setIsListening(false);
-              toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
-            }
-          }, 50);
-        }
-      } else {
-        console.error("Error desconocido:", event.error);
-        toastr.error(`Error en el reconocimiento de voz: ${event.error}`);
-        if (isListening) {
-          setTimeout(() => {
-            try {
-              if (isListening) {
-                recognition.start();
-                console.log("Reinicio tras error desconocido exitoso");
-              }
-            } catch (error) {
-              console.error("Error al reiniciar tras error desconocido:", error.message);
-              setIsListening(false);
-              toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
-            }
-          }, 50);
-        }
-      }
-    };
-
-    recognition.onspeechstart = () => {
-      console.log("Voz detectada");
-      if (silenceTimeoutRef.current) {
-        clearTimeout(silenceTimeoutRef.current);
       }
     };
 
     recognitionRef.current = recognition;
 
+    // Iniciar el reconocimiento si está activo al montar el componente
+    if (isListening) {
+      try {
+        recognition.start();
+      } catch (error) {
+        console.error("Error al iniciar reconocimiento:", error);
+      }
+    }
+
     return () => {
-      console.log("Limpiando reconocimiento de voz");
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
       if (silenceTimeoutRef.current) {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         clearTimeout(silenceTimeoutRef.current);
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isListening, onClose]);
 
   const startListening = async () => {
@@ -268,13 +263,22 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       if (!hasPermission) return;
 
       setIsListening(true);
+      restartAttemptsRef.current = 0;
       try {
         recognitionRef.current.start();
         console.log("Reconocimiento de voz activado");
       } catch (error) {
-        console.error("Error al iniciar reconocimiento:", error.message);
-        toastr.error("No se pudo activar el micrófono. Verifica los permisos.");
-        setIsListening(false);
+        console.error("Error al iniciar reconocimiento:", error);
+        // Intentar nuevamente después de un breve retraso
+        setTimeout(() => {
+          try {
+            recognitionRef.current.start();
+          } catch (retryError) {
+            console.error("Error en reintento:", retryError);
+            toastr.error("No se pudo activar el micrófono. Verifica los permisos.");
+            setIsListening(false);
+          }
+        }, 300);
       }
     }
   };
@@ -282,9 +286,10 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
   const stopListening = () => {
     if (recognitionRef.current && isListening) {
       setIsListening(false);
-      recognitionRef.current.stop();
-      if (silenceTimeoutRef.current) {
-        clearTimeout(silenceTimeoutRef.current);
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.error("Error al detener reconocimiento:", error);
       }
       console.log("Reconocimiento de voz desactivado");
     }
@@ -365,7 +370,9 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
           <button
             onClick={handleToggleListening}
             className={`p-2 rounded-full ${
-              isListening ? "bg-red-500" : "bg-blue-500"
+              isListening 
+                ? "bg-red-500 animate-pulse" 
+                : "bg-blue-500"
             } text-white hover:bg-opacity-80 transition-colors`}
             title={isListening ? "Detener micrófono" : "Activar micrófono"}
           >
@@ -374,6 +381,12 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
             />
           </button>
         </div>
+        {isListening && (
+          <div className="mb-4 text-center text-sm bg-blue-900 p-2 rounded">
+            Micrófono activo. Di: "número de placa...", "tipo de vehículo...", 
+            "propietario...", "dni...", "registrar" o "detener"
+          </div>
+        )}
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           <div className="relative">
             <FontAwesomeIcon
