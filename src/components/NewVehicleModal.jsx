@@ -23,7 +23,6 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
 
   // Detectar si el dispositivo es móvil
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
   // Limpiar los campos al cerrar el modal
   const resetForm = () => {
@@ -37,8 +36,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
 
   // Configurar el reconocimiento de voz
   useEffect(() => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       console.error("El navegador no soporta la API de reconocimiento de voz.");
       return;
@@ -50,9 +48,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     recognition.lang = "es-ES";
 
     recognition.onresult = (event) => {
-      const transcript = event.results[event.results.length - 1][0].transcript
-        .toLowerCase()
-        .trim();
+      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
       console.log("Texto reconocido:", transcript);
 
       // Comandos para desactivar el micrófono
@@ -73,18 +69,14 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       if (transcript.includes("registrar")) {
         stopListening();
         if (formRef.current) {
-          formRef.current.dispatchEvent(
-            new Event("submit", { cancelable: true, bubbles: true })
-          );
+          formRef.current.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
         }
         return;
       }
 
       // Procesar comandos para llenar los campos
       if (transcript.includes("número de placa")) {
-        const placaMatch = transcript.match(
-          /número de placa\s+([a-z0-9\s-]+)/i
-        );
+        const placaMatch = transcript.match(/número de placa\s+([a-z0-9\s-]+)/i);
         if (placaMatch && placaMatch[1]) {
           const placa = placaMatch[1].replace(/\s/g, "").toUpperCase();
           setFormData((prev) => ({ ...prev, numero_placa: placa }));
@@ -125,29 +117,25 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
         if (isListening) {
           restartRecognition();
         }
-      } else if (
-        event.error === "not-allowed" ||
-        event.error === "service-not-allowed"
-      ) {
-        console.error("Permiso para usar el micrófono denegado.");
-        setIsListening(false);
-        clearTimeout(restartTimeoutRef.current);
       } else {
-        console.error(`Error desconocido: ${event.error}`);
-        setIsListening(false);
+        console.error(`Error: ${event.error}`);
+        setIsListening(false); // Actualizar estado si hay un error
         clearTimeout(restartTimeoutRef.current);
       }
     };
 
     recognition.onend = () => {
-      console.log(
-        `Reconocimiento finalizado. isListening: ${isListening}, Mobile: ${isMobile}`
-      );
+      console.log(`Reconocimiento finalizado. isListening: ${isListening}, Mobile: ${isMobile}`);
       if (isListening) {
         restartRecognition();
       } else {
         console.log("No se reinicia porque isListening es false.");
       }
+    };
+
+    recognition.onstart = () => {
+      console.log("Reconocimiento de voz iniciado.");
+      setIsListening(true); // Asegurar que el estado sea correcto al iniciar
     };
 
     recognitionRef.current = recognition;
@@ -158,8 +146,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       }
       clearTimeout(restartTimeoutRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isListening, onClose, isMobile, isSafari]);
+  }, [isListening, onClose, isMobile]);
 
   // Función para reiniciar el reconocimiento con un pequeño retraso
   const restartRecognition = () => {
@@ -169,14 +156,14 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     restartTimeoutRef.current = setTimeout(() => {
       if (isListening && recognitionRef.current) {
         try {
-          console.log("Reiniciando reconocimiento...");
+          console.log("Intentando reiniciar reconocimiento...");
           recognitionRef.current.start();
         } catch (error) {
           console.error("Error al reiniciar reconocimiento:", error);
-          setIsListening(false);
+          setIsListening(false); // Actualizar estado si falla
         }
       }
-    }, 100); // Retraso de 100ms para evitar conflictos
+    }, 200); // Aumentamos el retraso a 200ms para mayor compatibilidad
   };
 
   const startListening = () => {
@@ -237,7 +224,6 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       }
     } catch (error) {
       const errorResponse = error.response ? error.response.data : null;
-      // eslint-disable-next-line no-unused-vars
       const errorMessage =
         errorResponse?.error || error.message || "Error desconocido";
       console.error("Error al registrar vehículo:", errorResponse);
@@ -271,9 +257,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
             } text-white hover:bg-opacity-80 transition-colors`}
             title={isListening ? "Desactivar micrófono" : "Activar micrófono"}
           >
-            <FontAwesomeIcon
-              icon={isListening ? faMicrophoneSlash : faMicrophone}
-            />
+            <FontAwesomeIcon icon={isListening ? faMicrophoneSlash : faMicrophone} />
           </button>
         </div>
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
