@@ -43,7 +43,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       return true;
     } catch (error) {
       console.error("Error al verificar permisos del micrófono:", error);
-      return true;
+      return true; // Continuar si la API de permisos no está soportada
     }
   };
 
@@ -76,14 +76,16 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     recognition.onend = () => {
       console.log("Reconocimiento detenido");
       if (isListening) {
-        console.log("Reiniciando reconocimiento...");
+        console.log("Reiniciando reconocimiento automáticamente...");
         try {
           recognition.start();
         } catch (error) {
-          console.error("Error al reiniciar reconocimiento:", error);
+          console.error("Error al reiniciar reconocimiento:", error.message);
           setIsListening(false);
-          toastr.error("Error al reiniciar el micrófono. Intenta de nuevo.");
+          toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
         }
+      } else {
+        console.log("Reconocimiento detenido intencionalmente");
       }
     };
 
@@ -144,7 +146,6 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       }
 
       if (field && value) {
-        // eslint-disable-next-line default-case
         switch (field) {
           case "numero_placa":
             const placaValue = value.replace(/\s/g, "").toUpperCase();
@@ -188,36 +189,48 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
           silenceTimeoutRef.current = setTimeout(() => {
             try {
               recognition.start();
+              console.log("Reinicio tras no-speech exitoso");
             } catch (error) {
-              console.error("Error al reiniciar tras no-speech:", error);
+              console.error("Error al reiniciar tras no-speech:", error.message);
+              setIsListening(false);
+              toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
             }
-          }, 1500); // Reducido a 1.5 segundos para mayor fluidez
+          }, 1000); // Reducido a 1 segundo para mayor fluidez
         }
       } else if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        toastr.error("Permiso para usar el micrófono denegado.");
+        console.error("Permiso del micrófono denegado");
+        toastr.error("Permiso para usar el micrófono denegado. Habilítalo en la configuración.");
         setIsListening(false);
       } else if (event.error === "aborted" || event.error === "network") {
         console.log("Reconocimiento abortado o error de red, intentando reiniciar...");
         if (isListening) {
           try {
             recognition.start();
+            console.log("Reinicio tras error exitoso");
           } catch (error) {
-            console.error("Error al reiniciar tras error:", error);
+            console.error("Error al reiniciar tras error:", error.message);
+            setIsListening(false);
+            toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
           }
         }
       } else {
+        console.error("Error desconocido:", event.error);
         toastr.error(`Error en el reconocimiento de voz: ${event.error}`);
         if (isListening) {
           try {
             recognition.start();
+            console.log("Reinicio tras error desconocido exitoso");
           } catch (error) {
-            console.error("Error al reiniciar tras error:", error);
+            console.error("Error al reiniciar tras error desconocido:", error.message);
+            setIsListening(false);
+            toastr.error("Error al mantener el micrófono activo. Intenta de nuevo.");
           }
         }
       }
     };
 
     recognition.onspeechstart = () => {
+      console.log("Voz detectada");
       if (silenceTimeoutRef.current) {
         clearTimeout(silenceTimeoutRef.current);
       }
@@ -226,6 +239,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     recognitionRef.current = recognition;
 
     return () => {
+      console.log("Limpiando reconocimiento de voz");
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
@@ -233,7 +247,6 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
         clearTimeout(silenceTimeoutRef.current);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isListening, onClose]);
 
   const startListening = async () => {
@@ -246,7 +259,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
         recognitionRef.current.start();
         console.log("Reconocimiento de voz activado");
       } catch (error) {
-        console.error("Error al iniciar reconocimiento:", error);
+        console.error("Error al iniciar reconocimiento:", error.message);
         toastr.error("No se pudo activar el micrófono. Verifica los permisos.");
         setIsListening(false);
       }
