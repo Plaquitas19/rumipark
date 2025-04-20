@@ -8,6 +8,7 @@ import debounce from "lodash/debounce";
 
 const CameraSection = () => {
   const videoRef = useRef(null);
+  const canvasRef = useRef(null); // Lienzo para dibujar el borde verde
   const fileInputRef = useRef(null);
   const containerRef = useRef(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -26,7 +27,9 @@ const CameraSection = () => {
   const [imageUsage, setImageUsage] = useState({ processed: 0, limit: 0 });
   const [isLoadingImageUsage, setIsLoadingImageUsage] = useState(false);
   const [isDetecting, setIsDetecting] = useState(false);
+  const [bbox, setBbox] = useState(null); // Almacenar coordenadas de la caja delimitadora
 
+  // Obtener el conteo de imágenes procesadas al cargar el componente
   useEffect(() => {
     const fetchImageUsage = async () => {
       try {
@@ -76,6 +79,7 @@ const CameraSection = () => {
     fetchImageUsage();
   }, []);
 
+  // Actualizar el conteo de imágenes después de cada detección (debounced)
   const updateImageUsage = useCallback(
     debounce(async () => {
       try {
@@ -127,6 +131,7 @@ const CameraSection = () => {
     []
   );
 
+  // Detección periódica cuando la cámara está activa
   useEffect(() => {
     let detectionInterval;
     if (isCameraActive && !isDetecting) {
@@ -137,6 +142,7 @@ const CameraSection = () => {
     return () => clearInterval(detectionInterval);
   }, [isCameraActive, isDetecting]);
 
+  // Limpiar placas bloqueadas y entradas recientes periódicamente
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -161,6 +167,29 @@ const CameraSection = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Dibujar el borde verde en el lienzo cuando se detecta una placa
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    if (canvas && video && isCameraActive && bbox) {
+      const context = canvas.getContext("2d");
+      const drawBorder = () => {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        if (bbox) {
+          context.strokeStyle = "green";
+          context.lineWidth = 4;
+          context.strokeRect(bbox.x, bbox.y, bbox.width, bbox.height);
+        }
+        if (isCameraActive) {
+          requestAnimationFrame(drawBorder);
+        }
+      };
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      drawBorder();
+    }
+  }, [bbox, isCameraActive]);
 
   const dataURLToFile = (dataURL, filename) => {
     const arr = dataURL.split(",");
@@ -188,32 +217,17 @@ const CameraSection = () => {
       const videoDevices = devices.filter(
         (device) => device.kind === "videoinput"
       );
-      if (!videoDevices.length) {
+      let backCamera = videoDevices.find((device) =>
+        device.label.toLowerCase().includes("back")
+      );
+      const camera =
+        backCamera ||
+        videoDevices.find((device) => device.kind === "videoinput");
+      if (!camera) {
         throw new Error("No hay cámaras disponibles.");
       }
-
-      // Detectar si es un dispositivo móvil
-      const isMobile = /Mobi|Android|iPhone|iPad/.test(navigator.userAgent);
-      let selectedCamera;
-
-      if (isMobile) {
-        // Priorizar cámara trasera en dispositivos móviles
-        selectedCamera = videoDevices.find((device) =>
-          device.label.toLowerCase().includes("back") ||
-          device.label.toLowerCase().includes("rear") ||
-          device.label.toLowerCase().includes("environment")
-        ) || videoDevices[0]; // Fallback a cualquier cámara si no hay trasera
-      } else {
-        // Usar la cámara predeterminada en desktops/laptops
-        selectedCamera = videoDevices[0];
-      }
-
-      if (!selectedCamera) {
-        throw new Error("No se pudo seleccionar una cámara.");
-      }
-
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: selectedCamera.deviceId },
+        video: { deviceId: camera.deviceId },
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -235,6 +249,7 @@ const CameraSection = () => {
       tracks.forEach((track) => track.stop());
       videoRef.current.srcObject = null;
       setIsCameraActive(false);
+      setBbox(null); // Limpiar la caja delimitadora al detener la cámara
     }
   };
 
@@ -302,6 +317,28 @@ const CameraSection = () => {
       if (response.ok && data.placa_detectada) {
         const normalizedPlate = normalizePlate(data.placa_detectada);
 
+        // Almacenar la caja delimitadora si se proporciona
+        if (data.bbox) {
+          console.log("Usando bbox de la API:", data.bbox);
+          setBbox(data.bbox); // Por ejemplo, { x, y, width, height }
+        } else {
+          // Respaldo: ajustar la posición para que coincida con la placa (parte inferior del marco)
+          const videoWidth = videoRef.current.videoWidth;
+          const videoHeight = videoRef.current.videoHeight;
+          const bboxWidth = videoWidth * 0.4; // 40% del ancho del video
+          const bboxHeight = videoHeight * 0.2; // 20% de la altura del video
+          const bboxX = (videoWidth - bboxWidth) / 2; // Centrado horizontalmente
+          const bboxY = videoHeight * 0.7; // 70% de la altura (parte inferior)
+          const fallbackBbox = {
+            x: bboxX,
+            y: bboxY,
+            width: bboxWidth,
+            height: bboxHeight,
+          };
+          console.log("Usando bbox de respaldo:", fallbackBbox);
+          setBbox(fallbackBbox);
+        }
+
         if (recentEntries[normalizedPlate]) {
           showNotification(
             `Entrada reciente para la placa ${normalizedPlate}. Debe esperar 3 minutos antes de registrar una nueva entrada o salida.`,
@@ -330,7 +367,6 @@ const CameraSection = () => {
               ...prev,
               [normalizedPlate]: Date.now() + 3 * 60 * 1000,
             }));
-            console.log("recentEntries después de entrada:", recentEntries);
             await updateImageUsage();
           } else {
             showNotification(
@@ -396,6 +432,7 @@ const CameraSection = () => {
         setPlateImage(null);
         setIsPlateRegistered(null);
         setVehicleDetails(null);
+        setBbox(null); // Limpiar la caja delimitadora en caso de error
         showNotification(
           data.error || data.mensaje || "Error al procesar la imagen.",
           "error"
@@ -406,6 +443,7 @@ const CameraSection = () => {
       setPlateImage(null);
       setIsPlateRegistered(null);
       setVehicleDetails(null);
+      setBbox(null); // Limpiar la caja delimitadora en caso de error
       showNotification("Error al procesar la imagen: " + err.message, "error");
       console.error("Error al enviar la imagen:", err);
     } finally {
@@ -533,6 +571,11 @@ const CameraSection = () => {
               ref={videoRef}
               className="absolute w-auto h-full object-cover rounded-lg"
             ></video>
+            <canvas
+              ref={canvasRef}
+              className="absolute w-auto h-full object-cover rounded-lg pointer-events-none"
+              style={{ opacity: bbox ? 1 : 0 }} // Ocultar lienzo si no hay bbox
+            ></canvas>
           </div>
           <div className="flex flex-col md:flex-row justify-between w-full mt-4 px-4 gap-4">
             <button
