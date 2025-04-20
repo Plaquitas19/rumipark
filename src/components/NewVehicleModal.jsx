@@ -17,14 +17,17 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     dni: "",
   });
   const [isListening, setIsListening] = useState(false);
+  const [transcriptMessage, setTranscriptMessage] = useState(""); // Mensaje para feedback
   const recognitionRef = useRef(null);
   const formRef = useRef(null);
-  const restartTimeoutRef = useRef(null); // Referencia para manejar el timeout de reinicio
+  const restartTimeoutRef = useRef(null);
 
-  // Detectar si el dispositivo es móvil
+  // Detectar dispositivo móvil y navegador
+  // eslint-disable-next-line no-unused-vars
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
-  // Limpiar los campos al cerrar el modal
+  // Limpiar formulario
   const resetForm = () => {
     setFormData({
       numero_placa: "",
@@ -32,110 +35,127 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       propietario: "",
       dni: "",
     });
+    setTranscriptMessage("");
   };
 
-  // Configurar el reconocimiento de voz
+  // Configurar reconocimiento de voz
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      console.error("El navegador no soporta la API de reconocimiento de voz.");
+      setTranscriptMessage(
+        "Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge."
+      );
       return;
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = true; // Mantener reconocimiento activo
-    recognition.interimResults = true; // Capturar resultados parciales para mejor compatibilidad
+    recognition.continuous = true;
+    recognition.interimResults = false; // Cambiado a false para resultados finales
     recognition.lang = "es-ES";
 
     recognition.onresult = (event) => {
-      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
-      console.log("Texto reconocido:", transcript);
+      const transcript = event.results[event.results.length - 1][0].transcript
+        .toLowerCase()
+        .trim();
+      setTranscriptMessage(`Escuchado: ${transcript}`);
 
-      // Comandos para desactivar el micrófono
-      if (transcript.includes("desactivar micrófono")) {
+      // Comandos de control
+      if (
+        transcript.includes("desactivar micrófono") ||
+        transcript.includes("para")
+      ) {
         stopListening();
+        setTranscriptMessage("Micrófono desactivado.");
         return;
       }
 
-      // Comando para cancelar
       if (transcript.includes("cancelar")) {
         stopListening();
         resetForm();
         onClose();
+        setTranscriptMessage("Operación cancelada.");
         return;
       }
 
-      // Comando para registrar
       if (transcript.includes("registrar")) {
         stopListening();
         if (formRef.current) {
-          formRef.current.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+          formRef.current.dispatchEvent(
+            new Event("submit", { cancelable: true, bubbles: true })
+          );
         }
         return;
       }
 
-      // Procesar comandos para llenar los campos
-      if (transcript.includes("número de placa")) {
-        const placaMatch = transcript.match(/número de placa\s+([a-z0-9\s-]+)/i);
-        if (placaMatch && placaMatch[1]) {
-          const placa = placaMatch[1].replace(/\s/g, "").toUpperCase();
-          setFormData((prev) => ({ ...prev, numero_placa: placa }));
-          console.log(`Número de placa establecido: ${placa}`);
-        }
-      } else if (transcript.includes("tipo de vehículo")) {
-        const tipoMatch = transcript.match(/tipo de vehículo\s+([a-z\s]+)/i);
-        if (tipoMatch && tipoMatch[1]) {
-          const tipo = tipoMatch[1].trim();
-          const tipoCapitalized = tipo.charAt(0).toUpperCase() + tipo.slice(1);
-          setFormData((prev) => ({ ...prev, tipo_vehiculo: tipoCapitalized }));
-          console.log(`Tipo de vehículo establecido: ${tipoCapitalized}`);
-        }
-      } else if (transcript.includes("propietario")) {
-        const propietarioMatch = transcript.match(/propietario\s+([a-z\s]+)/i);
-        if (propietarioMatch && propietarioMatch[1]) {
-          const nombre = propietarioMatch[1].trim();
-          const nombreCapitalized = nombre
-            .split(" ")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" ");
-          setFormData((prev) => ({ ...prev, propietario: nombreCapitalized }));
-          console.log(`Propietario establecido: ${nombreCapitalized}`);
-        }
-      } else if (transcript.includes("dni")) {
-        const dniMatch = transcript.match(/dni\s+([0-9]+)/i);
-        if (dniMatch && dniMatch[1]) {
-          setFormData((prev) => ({ ...prev, dni: dniMatch[1] }));
-          console.log(`DNI establecido: ${dniMatch[1]}`);
-        }
+      // Procesar campos con expresiones regulares más flexibles
+      const placaMatch = transcript.match(
+        /(?:número de placa|placa)\s+([a-z0-9\s-]+)/i
+      );
+      const tipoMatch = transcript.match(
+        /(?:tipo de vehículo|tipo)\s+([a-z\s]+)/i
+      );
+      const propietarioMatch = transcript.match(
+        /(?:propietario|dueño)\s+([a-z\s]+)/i
+      );
+      const dniMatch = transcript.match(/(?:dni|documento)\s+([0-9]+)/i);
+
+      if (placaMatch && placaMatch[1]) {
+        const placa = placaMatch[1].replace(/\s/g, "").toUpperCase();
+        setFormData((prev) => ({ ...prev, numero_placa: placa }));
+        setTranscriptMessage(`Placa establecida: ${placa}`);
+      }
+
+      if (tipoMatch && tipoMatch[1]) {
+        const tipo = tipoMatch[1].trim();
+        const tipoCapitalized = tipo.charAt(0).toUpperCase() + tipo.slice(1);
+        setFormData((prev) => ({ ...prev, tipo_vehiculo: tipoCapitalized }));
+        setTranscriptMessage(
+          `Tipo de vehículo establecido: ${tipoCapitalized}`
+        );
+      }
+
+      if (propietarioMatch && propietarioMatch[1]) {
+        const nombre = propietarioMatch[1].trim();
+        const nombreCapitalized = nombre
+          .split(" ")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
+        setFormData((prev) => ({ ...prev, propietario: nombreCapitalized }));
+        setTranscriptMessage(`Propietario establecido: ${nombreCapitalized}`);
+      }
+
+      if (dniMatch && dniMatch[1]) {
+        setFormData((prev) => ({ ...prev, dni: dniMatch[1] }));
+        setTranscriptMessage(`DNI establecido: ${dniMatch[1]}`);
       }
     };
 
     recognition.onerror = (event) => {
-      console.error("Error en el reconocimiento de voz:", event.error);
+      console.error("Error en reconocimiento:", event.error);
       if (event.error === "no-speech") {
-        console.log("No se detectó voz, intentando reiniciar...");
-        if (isListening) {
-          restartRecognition();
-        }
+        setTranscriptMessage("No se detectó voz, intenta de nuevo.");
+        if (isListening) restartRecognition();
+      } else if (
+        event.error === "not-allowed" ||
+        event.error === "service-not-allowed"
+      ) {
+        setTranscriptMessage("Permiso de micrófono denegado.");
+        setIsListening(false);
+        clearTimeout(restartTimeoutRef.current);
       } else {
-        console.error(`Error: ${event.error}`);
-        setIsListening(false); // Actualizar estado si hay un error
+        setTranscriptMessage(`Error: ${event.error}`);
+        setIsListening(false);
         clearTimeout(restartTimeoutRef.current);
       }
     };
 
     recognition.onend = () => {
-      console.log(`Reconocimiento finalizado. isListening: ${isListening}, Mobile: ${isMobile}`);
-      if (isListening) {
+      if (isListening && !isSafari) {
         restartRecognition();
       } else {
-        console.log("No se reinicia porque isListening es false.");
+        setIsListening(false);
       }
-    };
-
-    recognition.onstart = () => {
-      console.log("Reconocimiento de voz iniciado.");
-      setIsListening(true); // Asegurar que el estado sea correcto al iniciar
     };
 
     recognitionRef.current = recognition;
@@ -146,31 +166,30 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       }
       clearTimeout(restartTimeoutRef.current);
     };
-  }, [isListening, onClose, isMobile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isListening, isSafari]);
 
-  // Función para reiniciar el reconocimiento con un pequeño retraso
+  // Reiniciar reconocimiento
   const restartRecognition = () => {
-    if (restartTimeoutRef.current) {
-      clearTimeout(restartTimeoutRef.current);
-    }
+    clearTimeout(restartTimeoutRef.current);
     restartTimeoutRef.current = setTimeout(() => {
       if (isListening && recognitionRef.current) {
         try {
-          console.log("Intentando reiniciar reconocimiento...");
           recognitionRef.current.start();
         } catch (error) {
-          console.error("Error al reiniciar reconocimiento:", error);
-          setIsListening(false); // Actualizar estado si falla
+          console.error("Error al reiniciar:", error);
+          setIsListening(false);
+          setTranscriptMessage("Error al reiniciar reconocimiento.");
         }
       }
-    }, 200); // Aumentamos el retraso a 200ms para mayor compatibilidad
+    }, 200);
   };
 
   const startListening = () => {
     if (recognitionRef.current && !isListening) {
       setIsListening(true);
       recognitionRef.current.start();
-      console.log("Micrófono activado.");
+      setTranscriptMessage("Micrófono activado, di un comando...");
     }
   };
 
@@ -179,7 +198,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       setIsListening(false);
       recognitionRef.current.stop();
       clearTimeout(restartTimeoutRef.current);
-      console.log("Micrófono desactivado.");
+      setTranscriptMessage("Micrófono desactivado.");
     }
   };
 
@@ -195,7 +214,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     e.preventDefault();
     const userId = localStorage.getItem("id");
     if (!userId) {
-      console.error("Debes iniciar sesión primero.");
+      setTranscriptMessage("Debes iniciar sesión primero.");
       return;
     }
 
@@ -217,16 +236,16 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       );
 
       if (response.status === 201) {
-        console.log("Vehículo registrado exitosamente.");
+        setTranscriptMessage("Vehículo registrado exitosamente.");
         onSuccess();
         resetForm();
         onClose();
       }
     } catch (error) {
-      const errorResponse = error.response ? error.response.data : null;
       const errorMessage =
-        errorResponse?.error || error.message || "Error desconocido";
-      console.error("Error al registrar vehículo:", errorResponse);
+        error.response?.data?.error || error.message || "Error desconocido";
+      setTranscriptMessage(`Error al registrar: ${errorMessage}`);
+      console.error("Error:", error);
     }
   };
 
@@ -245,9 +264,9 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-[#6a97c1] text-white rounded-lg shadow-lg w-96 p-8 border-4 border-[#3a6e9f]">
+      <div className="bg-[#6a97c1] text-white rounded-lg shadow-lg w-full max-w-md p-6 sm:p-8 border-4 border-[#3a6e9f] mx-4">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-semibold text-center">
+          <h2 className="text-xl sm:text-2xl font-semibold text-center">
             Registrar Nuevo Vehículo
           </h2>
           <button
@@ -257,14 +276,17 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
             } text-white hover:bg-opacity-80 transition-colors`}
             title={isListening ? "Desactivar micrófono" : "Activar micrófono"}
           >
-            <FontAwesomeIcon icon={isListening ? faMicrophoneSlash : faMicrophone} />
+            <FontAwesomeIcon
+              icon={isListening ? faMicrophoneSlash : faMicrophone}
+            />
           </button>
         </div>
-        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+        <p className="text-sm text-gray-200 mb-4">{transcriptMessage}</p>
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
             <FontAwesomeIcon
               icon={faPen}
-              className="absolute left-4 top-4"
+              className="absolute left-4 top-3.5"
               style={{ color: "#1da4cf" }}
             />
             <input
@@ -273,7 +295,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
               value={formData.numero_placa}
               onChange={handleChange}
               placeholder="Número de Placa"
-              className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+              className="w-full pl-12 pr-4 py-2.5 text-base border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:outline-none"
               required
               style={{ borderColor: "#1da4cf" }}
             />
@@ -282,7 +304,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
           <div className="relative">
             <FontAwesomeIcon
               icon={faCar}
-              className="absolute left-4 top-4"
+              className="absolute left-4 top-3.5"
               style={{ color: "#1da4cf" }}
             />
             <input
@@ -291,7 +313,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
               value={formData.tipo_vehiculo}
               onChange={handleChange}
               placeholder="Tipo de Vehículo"
-              className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+              className="w-full pl-12 pr-4 py-2.5 text-base border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:outline-none"
               required
               style={{ borderColor: "#1da4cf" }}
             />
@@ -300,7 +322,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
           <div className="relative">
             <FontAwesomeIcon
               icon={faPen}
-              className="absolute left-4 top-4"
+              className="absolute left-4 top-3.5"
               style={{ color: "#1da4cf" }}
             />
             <input
@@ -309,7 +331,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
               value={formData.propietario}
               onChange={handleChange}
               placeholder="Propietario"
-              className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+              className="w-full pl-12 pr-4 py-2.5 text-base border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:outline-none"
               required
               style={{ borderColor: "#1da4cf" }}
             />
@@ -318,7 +340,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
           <div className="relative">
             <FontAwesomeIcon
               icon={faIdCard}
-              className="absolute left-4 top-4"
+              className="absolute left-4 top-3.5"
               style={{ color: "#1da4cf" }}
             />
             <input
@@ -327,7 +349,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
               value={formData.dni}
               onChange={handleChange}
               placeholder="DNI del Propietario"
-              className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+              className="w-full pl-12 pr-4 py-2.5 text-base border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:outline-none"
               required
               style={{ borderColor: "#1da4cf" }}
             />
@@ -337,13 +359,13 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
             <button
               type="button"
               onClick={handleClose}
-              className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-all"
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-all text-sm sm:text-base"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-6 py-3 bg-[#3a6e9f] text-white rounded-lg hover:bg-[#2e5a7d] transition-all"
+              className="px-4 py-2 bg-[#3a6e9f] text-white rounded-lg hover:bg-[#2e5a7d] transition-all text-sm sm:text-base"
             >
               Registrar
             </button>
