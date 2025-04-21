@@ -4,9 +4,9 @@ import { useNavigate } from "react-router-dom";
 
 const PlanCard = ({ title, price, description, features, icon, rotate }) => (
   <div
-    className={`bg-white rounded-xl p-8 flex flex-col items-center text-black shadow-lg border-2 border-blue-400 transform transition-all duration-300 hover:scale-105 ${rotate}`}
+    className={`bg-white rounded-xl p-8 flex flex-col items-center text-black shadow-lg border-2 border-[#1da4cf] transform transition-all duration-300 hover:scale-105 ${rotate} max-w-sm w-full`}
   >
-    <div className="text-5xl mb-4 text-blue-500">{icon}</div>
+    <div className="text-5xl mb-4 text-[#1da4cf]">{icon}</div>
     <h2 className="text-2xl font-bold text-center mb-2">{title}</h2>
     <p className="text-sm text-center mb-4">{description}</p>
     <p className="text-4xl font-bold text-center mb-6">{price}</p>
@@ -19,8 +19,8 @@ const PlanCard = ({ title, price, description, features, icon, rotate }) => (
 );
 
 const InfoCard = ({ icon, title, description }) => (
-  <div className="bg-white rounded-xl p-6 flex flex-col items-center text-black shadow-lg border-2 border-blue-400 transform transition-all duration-300 hover:scale-105">
-    <div className="text-4xl mb-4 text-blue-500">{icon}</div>
+  <div className="bg-white rounded-xl p-6 flex flex-col items-center text-black shadow-lg border-2 border-[#1da4cf] transform transition-all duration-300 hover:scale-105">
+    <div className="text-4xl mb-4 text-[#1da4cf]">{icon}</div>
     <h3 className="text-lg font-semibold text-center mb-2">{title}</h3>
     <p className="text-sm text-center">{description}</p>
   </div>
@@ -28,20 +28,6 @@ const InfoCard = ({ icon, title, description }) => (
 
 // Configuración de los planes
 const plans = [
-  {
-    id: 1,
-    title: "Gratuito",
-    price: "S/. 0.00/mes",
-    description: "Ideal para pequeñas instalaciones.",
-    features: [
-      "Detección de hasta 30 placas al mes.",
-      "Registro básico de entradas y salidas.",
-      "Alertas de vehículos no autorizados.",
-      "Soporte por correo electrónico.",
-    ],
-    icon: "📷",
-    rotate: "-rotate-3",
-  },
   {
     id: 2,
     title: "Básico",
@@ -54,7 +40,7 @@ const plans = [
       "Soporte por correo y chat.",
     ],
     icon: "🚗",
-    rotate: "rotate-0",
+    rotate: "-rotate-2",
   },
   {
     id: 3,
@@ -68,7 +54,7 @@ const plans = [
       "Soporte prioritario 24/7.",
     ],
     icon: "🔒",
-    rotate: "rotate-3",
+    rotate: "rotate-2",
   },
 ];
 
@@ -132,19 +118,16 @@ const useCases = [
 ];
 
 const PricingPlans = () => {
-  // eslint-disable-next-line no-unused-vars
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLoginModal] = useState(false);
   const navigate = useNavigate();
-  // eslint-disable-next-line no-unused-vars
-  const userId = localStorage.getItem("id");
 
   return (
-    <div className="bg-gradient-to-b from-white to-blue-200 min-h-screen">
+    <div className="bg-gradient-to-b from-blue-100 to-[#1da4cf] min-h-screen">
       <Header />
       <div className="container mx-auto pt-12 px-4">
         {/* Encabezado */}
         <div className="text-center mb-12 bg-white py-8 rounded-xl shadow-lg">
-          <div className="inline-block bg-blue-200 text-black text-sm font-semibold px-4 py-1 rounded-full mb-4">
+          <div className="inline-block bg-[#1da4cf] text-white text-sm font-semibold px-4 py-1 rounded-full mb-4">
             RUMIPARK
           </div>
           <h1 className="text-4xl font-bold text-black mb-4">
@@ -158,17 +141,19 @@ const PricingPlans = () => {
 
         {/* Planes */}
         <div className="bg-blue-100 rounded-xl py-12 mb-16">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {plans.map((plan) => (
-              <PlanCard key={plan.id} {...plan} />
-            ))}
+          <div className="flex justify-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-4xl">
+              {plans.map((plan) => (
+                <PlanCard key={plan.id} {...plan} />
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Características principales */}
-        <div className="bg-white rounded-xl py-20 mb-16">
+        <div className="bg-blue-50 rounded-xl py-20 mb-16">
           <div className="max-w-5xl mx-auto">
-            <h2 className="text-3xl font-bold text-center text-black mb-10 pb-4 border-b-2 border-blue-300">
+            <h2 className="text-3xl font-bold text-center text-black mb-10 pb-4 border-b-2 border-[#1da4cf]">
               ¿Por qué elegir Rumipark?
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -180,9 +165,9 @@ const PricingPlans = () => {
         </div>
 
         {/* Beneficios */}
-        <div className="bg-blue-100 rounded-xl py-20 mb-16">
+        <div className="bg-blue-50 rounded-xl py-20 mb-16">
           <div className="max-w-5xl mx-auto">
-            <h2 className="text-3xl font-bold text-center text-black mb-10 pb-4 border-b-2 border-blue-300">
+            <h2 className="text-3xl font-bold text-center text-black mb-10 pb-4 border-b-2 border-[#1da4cf]">
               Beneficios de usar Rumipark
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -194,9 +179,9 @@ const PricingPlans = () => {
         </div>
 
         {/* Casos de uso */}
-        <div className="bg-white rounded-xl py-20 mb-16">
+        <div className="bg-blue-50 rounded-xl py-20 mb-16">
           <div className="max-w-5xl mx-auto">
-            <h2 className="text-3xl font-bold text-center text-black mb-10 pb-4 border-b-2 border-blue-300">
+            <h2 className="text-3xl font-bold text-center text-black mb-10 pb-4 border-b-2 border-[#1da4cf]">
               Casos de uso
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -208,7 +193,7 @@ const PricingPlans = () => {
         </div>
 
         {/* Llamado a la acción */}
-        <div className="text-center py-12 bg-blue-300 rounded-xl max-w-5xl mx-auto mb-16 shadow-lg">
+        <div className="text-center py-12 bg-[#1da4cf] rounded-xl max-w-5xl mx-auto mb-16 shadow-lg">
           <h2 className="text-4xl font-bold text-black mb-4">
             ¡Optimiza tu gestión vehicular hoy!
           </h2>
@@ -220,7 +205,7 @@ const PricingPlans = () => {
             href="https://wa.me/1234567890?text=Hola,%20quiero%20información%20sobre%20los%20planes%20de%20Rumipark"
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-8 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-colors duration-300 text-lg font-semibold"
+            className="bg-gradient-to-r from-[#1da4cf] to-blue-600 text-white py-3 px-8 rounded-lg hover:from-blue-600 hover:to-[#1da4cf] transition-colors duration-300 text-lg font-semibold"
           >
             Contáctanos ahora
           </a>
@@ -250,7 +235,7 @@ const PricingPlans = () => {
             <div className="flex justify-center">
               <button
                 onClick={() => navigate("/login")}
-                className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors duration-300"
+                className="bg-[#1da4cf] text-white py-2 px-6 rounded-lg hover:bg-blue-600 transition-colors duration-300"
               >
                 Ir al Login
               </button>
