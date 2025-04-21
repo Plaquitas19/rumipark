@@ -4,9 +4,9 @@ import { useNavigate } from "react-router-dom";
 
 const PlanCard = ({ title, price, description, features, icon, rotate }) => (
   <div
-    className={`bg-white rounded-xl p-8 flex flex-col items-center text-black shadow-lg border-2 border-[#1da4cf] transform transition-all duration-300 hover:scale-105 ${rotate} max-w-sm w-full`}
+    className={`bg-[#1da4cf] rounded-xl p-8 flex flex-col items-center text-white shadow-lg border-2 border-blue-200 transform transition-all duration-300 hover:scale-105 ${rotate} max-w-sm w-full`}
   >
-    <div className="text-5xl mb-4 text-[#1da4cf]">{icon}</div>
+    <div className="text-5xl mb-4 text-blue-200">{icon}</div>
     <h2 className="text-2xl font-bold text-center mb-2">{title}</h2>
     <p className="text-sm text-center mb-4">{description}</p>
     <p className="text-4xl font-bold text-center mb-6">{price}</p>
@@ -19,8 +19,8 @@ const PlanCard = ({ title, price, description, features, icon, rotate }) => (
 );
 
 const InfoCard = ({ icon, title, description }) => (
-  <div className="bg-white rounded-xl p-6 flex flex-col items-center text-black shadow-lg border-2 border-[#1da4cf] transform transition-all duration-300 hover:scale-105">
-    <div className="text-4xl mb-4 text-[#1da4cf]">{icon}</div>
+  <div className="bg-[#1da4cf] rounded-xl p-6 flex flex-col items-center text-white shadow-lg border-2 border-blue-200 transform transition-all duration-300 hover:scale-105">
+    <div className="text-4xl mb-4 text-blue-200">{icon}</div>
     <h3 className="text-lg font-semibold text-center mb-2">{title}</h3>
     <p className="text-sm text-center">{description}</p>
   </div>
@@ -118,8 +118,11 @@ const useCases = [
 ];
 
 const PricingPlans = () => {
-  const [showLoginModal] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const navigate = useNavigate();
+  // eslint-disable-next-line no-unused-vars
+  const userId = localStorage.getItem("id");
 
   return (
     <div className="bg-gradient-to-b from-blue-100 to-[#1da4cf] min-h-screen">
