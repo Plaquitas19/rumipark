@@ -10,6 +10,7 @@ import {
   faEye,
   faEyeSlash,
   faEnvelope,
+  faArrowDown,
 } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router-dom";
 
@@ -171,7 +172,20 @@ function Login() {
     >
       {/* Panel izquierdo */}
       <div className="lg:w-1/2 w-full flex justify-center items-center p-4 relative">
-        <Link to="/">
+        <div className="absolute top-6 sm:top-12 md:top-16 lg:top-20 flex flex-col items-center space-y-4 animate-bounce">
+          <span
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-[#f5f6f7] tracking-wide"
+            style={{ textShadow: "0 4px 10px rgba(22, 127, 159, 0.8)" }}
+          >
+            Descubre nuestros planes
+          </span>
+          <FontAwesomeIcon
+            icon={faArrowDown}
+            className="text-[#f9fafa] text-5xl sm:text-6xl lg:text-7xl transition-transform transform hover:scale-125 hover:text-[#4cd6f8] duration-300 ease-in-out"
+            style={{ textShadow: "0 4px 10px rgba(22, 127, 159, 0.8)" }}
+          />
+        </div>
+        <Link to="/pricing">
           <img
             src={icono}
             alt="Logo"
@@ -264,7 +278,8 @@ function Login() {
           </form>
         )}
 
-        {/* <button
+        {/*
+<button
   className="mt-6 text-lg underline"
   style={{ color: "#167f9f" }}
   onClick={() => setIsRegistering(!isRegistering)}
@@ -272,7 +287,8 @@ function Login() {
   {isRegistering
     ? "¿Ya tienes cuenta? Inicia sesión aquí"
     : "¿No tienes cuenta? Regístrate aquí"}
-</button> */}
+</button>
+*/}
       </div>
     </div>
   );
