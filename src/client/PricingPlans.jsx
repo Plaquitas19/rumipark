@@ -2,6 +2,14 @@ import React, { useState } from "react";
 import Header from "./Header";
 import { useNavigate } from "react-router-dom";
 
+// Importamos Font Awesome para usar el ícono de WhatsApp
+const FontAwesomeCDN = () => (
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+  />
+);
+
 const PlanCard = ({ title, price, description, features, icon, rotate }) => (
   <div
     className={`bg-[#1da4cf] rounded-xl p-8 flex flex-col items-center text-white shadow-lg border-2 border-blue-200 transform transition-all duration-300 hover:scale-105 ${rotate} max-w-sm w-full`}
@@ -37,7 +45,6 @@ const plans = [
       "Detección de hasta 100 placas al mes.",
       "Registro detallado de entradas y salidas.",
       "Reportes básicos en PDF.",
-      "Soporte por correo y chat.",
     ],
     icon: "🚗",
     rotate: "-rotate-2",
@@ -126,6 +133,7 @@ const PricingPlans = () => {
 
   return (
     <div className="bg-gradient-to-b from-blue-100 to-[#1da4cf] min-h-screen">
+      <FontAwesomeCDN />
       <Header />
       <div className="container mx-auto pt-12 px-4">
         {/* Encabezado */}
@@ -205,7 +213,7 @@ const PricingPlans = () => {
             instalaciones con nuestra tecnología avanzada.
           </p>
           <a
-            href="https://wa.me/1234567890?text=Hola,%20quiero%20información%20sobre%20los%20planes%20de%20Rumipark"
+            href="https://wa.me/978682722?text=Hola,%20quiero%20información%20sobre%20los%20planes%20de%20Rumipark"
             target="_blank"
             rel="noopener noreferrer"
             className="bg-gradient-to-r from-[#1da4cf] to-blue-600 text-white py-3 px-8 rounded-lg hover:from-blue-600 hover:to-[#1da4cf] transition-colors duration-300 text-lg font-semibold"
@@ -217,12 +225,12 @@ const PricingPlans = () => {
 
       {/* Ícono de WhatsApp flotante */}
       <a
-        href="https://wa.me/1234567890?text=Hola,%20quiero%20información%20sobre%20los%20planes%20de%20Rumipark"
+        href="https://wa.me/978682722?text=Hola,%20quiero%20información%20sobre%20los%20planes%20de%20Rumipark"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-colors duration-300 flex items-center animate-pulse"
       >
-        <span className="text-2xl mr-2">📞</span>
+        <i className="fa-brands fa-whatsapp text-2xl mr-2"></i>
         <span className="text-sm font-semibold">Contacta con nosotros</span>
       </a>
 
