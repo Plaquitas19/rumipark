@@ -634,7 +634,7 @@ const CameraSection = () => {
               </div>
             </div>
             <div className="mt-6 text-center">
-              {plateImage && (
+              {plateImage && detectedPlate && (
                 <div>
                   <p
                     className={`text-${
@@ -726,7 +726,7 @@ const CameraSection = () => {
                       </div>
                     )}
                   </div>
-                  {vehicleDetails && (
+                  {vehicleDetails && detectedPlate && isPlateRegistered && (
                     <div className="mt-6 bg-white p-6 rounded-xl shadow-lg border border-gray-300 space-y-6">
                       <h3 className="text-2xl font-bold text-gray-800 text-center flex items-center justify-center gap-2">
                         <i className="fas fa-car text-blue-600"></i> Detalles
