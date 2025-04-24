@@ -212,14 +212,6 @@ const PricingPlans = () => {
             Prueba Rumipark y mejora la seguridad y eficiencia de tus
             instalaciones con nuestra tecnología avanzada.
           </p>
-          <a
-            href="https://wa.me/978682722?text=Hola,%20quiero%20información%20sobre%20los%20planes%20de%20Rumipark"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-gradient-to-r from-[#1da4cf] to-blue-600 text-white py-3 px-8 rounded-lg hover:from-blue-600 hover:to-[#1da4cf] transition-colors duration-300 text-lg font-semibold"
-          >
-            Contáctanos ahora
-          </a>
         </div>
       </div>
 
