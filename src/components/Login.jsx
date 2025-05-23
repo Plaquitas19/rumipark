@@ -51,6 +51,13 @@ function Login() {
     e.preventDefault();
     try {
       setIsLoading(true);
+      // Validar campos antes de enviar
+      if (!username || !password) {
+        setIsLoading(false);
+        toastr.error("Por favor, completa el nombre de usuario y la contraseña.");
+        return;
+      }
+
       const response = await timeoutPromise(
         10000,
         fetch(`${API_URL}/login`, {
@@ -62,21 +69,20 @@ function Login() {
         })
       );
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({
-          message:
-            "Error inesperado del servidor. Verifica el estado del servidor.",
-        }));
         setIsLoading(false);
-        toastr.error(errorData.message || "Credenciales incorrectas");
+        toastr.error(data.message || "Credenciales incorrectas");
         return;
       }
 
-      const data = await response.json();
-      localStorage.setItem("auth_token", data.token);
+      // Almacenar datos del usuario
+      localStorage.setItem("auth_token", data.token || "placeholder_token"); // Ajustar según backend
       localStorage.setItem("username", data.username);
       localStorage.setItem("id", data.id);
-      localStorage.setItem("plan_id", data.plan_id);
+      // Nota: El backend no devuelve plan_id en login, ajustar si es necesario
+      localStorage.setItem("plan_id", "1"); // Valor por defecto, ajustar si el backend lo proporciona
 
       setIsLoading(false);
       navigate("/dashboard/main");
@@ -111,7 +117,24 @@ function Login() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      setIsLoading(true); // Mostrar la animación de carga inmediatamente
+      setIsLoading(true);
+      // Validar campos antes de enviar
+      if (!username || !email || !password) {
+        setIsLoading(false);
+        toastr.error(
+          "Por favor, completa el nombre de usuario, correo electrónico y contraseña."
+        );
+        return;
+      }
+
+      // Depuración: Mostrar datos enviados
+      console.log("Datos enviados al backend:", {
+        username,
+        email,
+        password,
+        plan_id: 1,
+      });
+
       const response = await timeoutPromise(
         10000,
         fetch(API_URL, {
@@ -119,21 +142,19 @@ function Login() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ username, email, password }),
+          body: JSON.stringify({ username, email, password, plan_id: 1 }),
         })
       );
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({
-          message:
-            "Error inesperado del servidor. Verifica el estado del servidor.",
-        }));
         setIsLoading(false);
-        toastr.error(errorData.message || "Error al registrar el usuario");
+        toastr.error(data.error || "Error al registrar el usuario");
         return;
       }
 
-      setIsLoading(false); // Ocultar la animación de carga después del éxito
+      setIsLoading(false);
       toastr.success(
         "Usuario registrado exitosamente. Ahora puedes iniciar sesión."
       );
@@ -154,12 +175,11 @@ function Login() {
       ) {
         errorMessage =
           "No se pudo conectar al servidor. Verifica la URL o el estado del servidor en PythonAnywhere.";
-        // Añadir más detalles para depuración
         console.error("Detalles del error de conexión:", {
           error: error.message,
           url: API_URL,
-          status: error.status, // Si está disponible
-          stack: error.stack, // Traza del error para depuración
+          status: error.status,
+          stack: error.stack,
         });
       }
       toastr.error(errorMessage);
@@ -218,14 +238,16 @@ function Login() {
                 <FontAwesomeIcon
                   icon={faEnvelope}
                   className="absolute left-4 top-5"
-                  style={{ color: "#167f9f" }}
+ труб
+
+System: style={{ color: "#167f9f" }}
                 />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Correo electrónico"
-                  className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-gray-50 text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+                  className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow lucr-sm bg-gray-50 text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
                   style={{ borderColor: "#167f9f" }}
                 />
               </div>
