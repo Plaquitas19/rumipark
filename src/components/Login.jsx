@@ -44,7 +44,7 @@ function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const API_URL = "https://rumipark-CamiMujica.pythonanywhere.com/usuarios";
+  const API_URL = "https://CamiMujica.pythonanywhere.com/usuarios";
 
   // Manejar inicio de sesión
   const handleLogin = async (e) => {
@@ -111,7 +111,7 @@ function Login() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      setIsLoading(true);
+      setIsLoading(true); // Mostrar la animación de carga inmediatamente
       const response = await timeoutPromise(
         10000,
         fetch(API_URL, {
@@ -133,7 +133,7 @@ function Login() {
         return;
       }
 
-      setIsLoading(false);
+      setIsLoading(false); // Ocultar la animación de carga después del éxito
       toastr.success(
         "Usuario registrado exitosamente. Ahora puedes iniciar sesión."
       );
@@ -154,11 +154,12 @@ function Login() {
       ) {
         errorMessage =
           "No se pudo conectar al servidor. Verifica la URL o el estado del servidor en PythonAnywhere.";
+        // Añadir más detalles para depuración
         console.error("Detalles del error de conexión:", {
           error: error.message,
           url: API_URL,
-          status: error.status,
-          stack: error.stack,
+          status: error.status, // Si está disponible
+          stack: error.stack, // Traza del error para depuración
         });
       }
       toastr.error(errorMessage);
@@ -185,7 +186,7 @@ function Login() {
             style={{ textShadow: "0 4px 10px rgba(22, 127, 159, 0.8)" }}
           />
         </div>
-        <Link to="/pricing">
+        <Link to="/">
           <img
             src={icono}
             alt="Logo"
@@ -278,17 +279,15 @@ function Login() {
           </form>
         )}
 
-        {/*
-<button
-  className="mt-6 text-lg underline"
-  style={{ color: "#167f9f" }}
-  onClick={() => setIsRegistering(!isRegistering)}
->
-  {isRegistering
-    ? "¿Ya tienes cuenta? Inicia sesión aquí"
-    : "¿No tienes cuenta? Regístrate aquí"}
-</button>
-*/}
+        <button
+          className="mt-6 text-lg underline"
+          style={{ color: "#167f9f" }}
+          onClick={() => setIsRegistering(!isRegistering)}
+        >
+          {isRegistering
+            ? "¿Ya tienes cuenta? Inicia sesión aquí"
+            : "¿No tienes cuenta? Regístrate aquí"}
+        </button>
       </div>
     </div>
   );
