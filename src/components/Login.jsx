@@ -44,7 +44,7 @@ function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const API_URL = "https://CamiMujica.pythonanywhere.com/usuarios";
+  const API_URL = "https://rumipark-CamiMujica.pythonanywhere.com/usuarios";
 
   // Manejar inicio de sesión
   const handleLogin = async (e) => {
