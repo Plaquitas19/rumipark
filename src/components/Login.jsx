@@ -54,7 +54,9 @@ function Login() {
       // Validar campos antes de enviar
       if (!username || !password) {
         setIsLoading(false);
-        toastr.error("Por favor, completa el nombre de usuario y la contraseña.");
+        toastr.error(
+          "Por favor, completa el nombre de usuario y la contraseña."
+        );
         return;
       }
 
@@ -78,11 +80,10 @@ function Login() {
       }
 
       // Almacenar datos del usuario
-      localStorage.setItem("auth_token", data.token || "placeholder_token"); // Ajustar según backend
+      localStorage.setItem("auth_token", data.token || "placeholder_token");
       localStorage.setItem("username", data.username);
       localStorage.setItem("id", data.id);
-      // Nota: El backend no devuelve plan_id en login, ajustar si es necesario
-      localStorage.setItem("plan_id", "1"); // Valor por defecto, ajustar si el backend lo proporciona
+      localStorage.setItem("plan_id", "1");
 
       setIsLoading(false);
       navigate("/dashboard/main");
@@ -238,16 +239,14 @@ function Login() {
                 <FontAwesomeIcon
                   icon={faEnvelope}
                   className="absolute left-4 top-5"
- труб
-
-System: style={{ color: "#167f9f" }}
+                  style={{ color: "#167f9f" }}
                 />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Correo electrónico"
-                  className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow lucr-sm bg-gray-50 text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
+                  className="w-full pl-14 pr-5 py-3 text-lg border-2 rounded-md shadow-sm bg-gray-50 text-gray-900 placeholder-gray-500 focus:ring-4 focus:outline-none"
                   style={{ borderColor: "#167f9f" }}
                 />
               </div>
