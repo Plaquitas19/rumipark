@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import NewVehicleModal from "./NewVehicleModal";
 import "@fortawesome/fontawesome-free/css/all.css";
@@ -8,7 +7,7 @@ import debounce from "lodash/debounce";
 
 const CameraSection = () => {
   const videoRef = useRef(null);
-  const canvasRef = useRef(null); // Lienzo para dibujar el borde verde
+  const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const containerRef = useRef(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -27,9 +26,8 @@ const CameraSection = () => {
   const [imageUsage, setImageUsage] = useState({ processed: 0, limit: 0 });
   const [isLoadingImageUsage, setIsLoadingImageUsage] = useState(false);
   const [isDetecting, setIsDetecting] = useState(false);
-  const [bbox, setBbox] = useState(null); // Almacenar coordenadas de la caja delimitadora
+  const [bbox, setBbox] = useState(null);
 
-  // Obtener el conteo de imágenes procesadas al cargar el componente
   useEffect(() => {
     const fetchImageUsage = async () => {
       try {
@@ -79,7 +77,6 @@ const CameraSection = () => {
     fetchImageUsage();
   }, []);
 
-  // Actualizar el conteo de imágenes después de cada detección (debounced)
   const updateImageUsage = useCallback(
     debounce(async () => {
       try {
@@ -131,7 +128,6 @@ const CameraSection = () => {
     []
   );
 
-  // Detección periódica cuando la cámara está activa
   useEffect(() => {
     let detectionInterval;
     if (isCameraActive && !isDetecting) {
@@ -142,7 +138,6 @@ const CameraSection = () => {
     return () => clearInterval(detectionInterval);
   }, [isCameraActive, isDetecting]);
 
-  // Limpiar placas bloqueadas y entradas recientes periódicamente
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -168,7 +163,6 @@ const CameraSection = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Dibujar el borde verde en el lienzo cuando se detecta una placa
   useEffect(() => {
     const canvas = canvasRef.current;
     const video = videoRef.current;
@@ -249,7 +243,7 @@ const CameraSection = () => {
       tracks.forEach((track) => track.stop());
       videoRef.current.srcObject = null;
       setIsCameraActive(false);
-      setBbox(null); // Limpiar la caja delimitadora al detener la cámara
+      setBbox(null);
     }
   };
 
@@ -317,18 +311,16 @@ const CameraSection = () => {
       if (response.ok && data.placa_detectada) {
         const normalizedPlate = normalizePlate(data.placa_detectada);
 
-        // Almacenar la caja delimitadora si se proporciona
         if (data.bbox) {
           console.log("Usando bbox de la API:", data.bbox);
-          setBbox(data.bbox); // Por ejemplo, { x, y, width, height }
+          setBbox(data.bbox);
         } else {
-          // Respaldo: ajustar la posición para que coincida con la placa (parte inferior del marco)
           const videoWidth = videoRef.current.videoWidth;
           const videoHeight = videoRef.current.videoHeight;
-          const bboxWidth = videoWidth * 0.4; // 40% del ancho del video
-          const bboxHeight = videoHeight * 0.2; // 20% de la altura del video
-          const bboxX = (videoWidth - bboxWidth) / 2; // Centrado horizontalmente
-          const bboxY = videoHeight * 0.7; // 70% de la altura (parte inferior)
+          const bboxWidth = videoWidth * 0.4;
+          const bboxHeight = videoHeight * 0.2;
+          const bboxX = (videoWidth - bboxWidth) / 2;
+          const bboxY = videoHeight * 0.7;
           const fallbackBbox = {
             x: bboxX,
             y: bboxY,
@@ -376,24 +368,32 @@ const CameraSection = () => {
             await registerExit(normalizedPlate, userId);
           }
 
+          // Depuración detallada para la solicitud de detalles
           try {
+            console.log(`Solicitando detalles para placa: ${normalizedPlate}, usuario: ${userId}`);
             const detailsResponse = await fetch(
               `https://rumipark-camimujica.pythonanywhere.com/vehiculo/${normalizedPlate}?id=${userId}`
             );
+            console.log("Estado de la respuesta de /vehiculo:", detailsResponse.status);
             const detailsData = await detailsResponse.json();
+            console.log("Datos de /vehiculo:", detailsData);
+
             if (detailsResponse.ok) {
               setVehicleDetails(detailsData);
+              showNotification("Detalles del vehículo obtenidos con éxito.", "success");
             } else {
+              console.error("Error en /vehiculo:", detailsData);
               setVehicleDetails(null);
               showNotification(
-                "No se pudieron obtener los detalles del vehículo.",
+                `No se pudieron obtener los detalles del vehículo: ${detailsData.message || detailsData.error}`,
                 "error"
               );
             }
           } catch (err) {
             console.error("Error al obtener detalles del vehículo:", err);
+            setVehicleDetails(null);
             showNotification(
-              "No se pudieron obtener los detalles del vehículo.",
+              `Error al obtener detalles del vehículo: ${err.message}`,
               "error"
             );
           }
@@ -410,18 +410,30 @@ const CameraSection = () => {
             "info"
           );
           try {
+            console.log(`Solicitando detalles para placa (salida reciente): ${normalizedPlate}, usuario: ${userId}`);
             const detailsResponse = await fetch(
               `https://rumipark-camimujica.pythonanywhere.com/vehiculo/${normalizedPlate}?id=${userId}`
             );
+            console.log("Estado de la respuesta de /vehiculo (salida reciente):", detailsResponse.status);
             const detailsData = await detailsResponse.json();
+            console.log("Datos de /vehiculo (salida reciente):", detailsData);
             if (detailsResponse.ok) {
               setVehicleDetails(detailsData);
             } else {
+              console.error("Error en /vehiculo (salida reciente):", detailsData);
               setVehicleDetails(null);
+              showNotification(
+                `No se pudieron obtener los detalles del vehículo: ${detailsData.message || detailsData.error}`,
+                "error"
+              );
             }
           } catch (err) {
-            console.error("Error al obtener detalles del vehículo:", err);
+            console.error("Error al obtener detalles del vehículo (salida reciente):", err);
             setVehicleDetails(null);
+            showNotification(
+              `Error al obtener detalles del vehículo: ${err.message}`,
+              "error"
+            );
           }
         }
 
@@ -432,7 +444,7 @@ const CameraSection = () => {
         setPlateImage(null);
         setIsPlateRegistered(null);
         setVehicleDetails(null);
-        setBbox(null); // Limpiar la caja delimitadora en caso de error
+        setBbox(null);
         showNotification(
           data.error || data.mensaje || "Error al procesar la imagen.",
           "error"
@@ -443,7 +455,7 @@ const CameraSection = () => {
       setPlateImage(null);
       setIsPlateRegistered(null);
       setVehicleDetails(null);
-      setBbox(null); // Limpiar la caja delimitadora en caso de error
+      setBbox(null);
       showNotification("Error al procesar la imagen: " + err.message, "error");
       console.error("Error al enviar la imagen:", err);
     } finally {
@@ -574,7 +586,7 @@ const CameraSection = () => {
             <canvas
               ref={canvasRef}
               className="absolute w-auto h-full object-cover rounded-lg pointer-events-none"
-              style={{ opacity: bbox ? 1 : 0 }} // Ocultar lienzo si no hay bbox
+              style={{ opacity: bbox ? 1 : 0 }}
             ></canvas>
           </div>
           <div className="flex flex-col md:flex-row justify-between w-full mt-4 px-4 gap-4">
@@ -742,7 +754,7 @@ const CameraSection = () => {
                               Tipo de Vehículo
                             </p>
                             <p className="text-lg font-semibold text-blue-800">
-                              {vehicleDetails.tipo_vehiculo}
+                              {vehicleDetails.tipo_vehiculo || "No disponible"}
                             </p>
                           </div>
                         </div>
@@ -755,7 +767,7 @@ const CameraSection = () => {
                               Propietario
                             </p>
                             <p className="text-lg font-semibold text-green-800">
-                              {vehicleDetails.propietario}
+                              {vehicleDetails.propietario || "No disponible"}
                             </p>
                           </div>
                         </div>
@@ -768,7 +780,7 @@ const CameraSection = () => {
                               DNI
                             </p>
                             <p className="text-lg font-semibold text-yellow-800">
-                              {vehicleDetails.dni}
+                              {vehicleDetails.dni || "No disponible"}
                             </p>
                           </div>
                         </div>
