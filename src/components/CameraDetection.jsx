@@ -120,43 +120,29 @@ const CameraDetection = () => {
             return;
           }
 
-          // Verificar si la placa está registrada
-          try {
-            const detailsResponse = await fetch(
-              `https://rumipark-CamiMujica.pythonanywhere.com/vehiculo/${normalizedPlate}?id=${userId}`
-            );
-            const detailsData = await detailsResponse.json();
-            if (detailsResponse.ok) {
-              setResultado({
-                mensaje: "Placa registrada.",
-                estado: "Placa registrada",
-                placa_imagen: data.placa_imagen || null,
-                placa_detectada: normalizedPlate,
-                detalles: detailsData,
-              });
-              toastr.success("Placa registrada.");
-            } else {
-              setResultado({
-                mensaje:
-                  "Placa no registrada. Por favor, registre el vehículo.",
-                estado: "Placa no registrada",
-                placa_imagen: data.placa_imagen || null,
-                placa_detectada: normalizedPlate,
-                detalles: null,
-              });
-              toastr.warning(
-                "Placa no registrada. Por favor, registre el vehículo."
-              );
-            }
-          } catch (err) {
+          // Usar los datos de la respuesta directamente
+          if (data.estado === "Placa registrada" && data.vehiculo) {
             setResultado({
-              mensaje: "No se pudieron obtener los detalles del vehículo.",
-              estado: "Error",
+              mensaje: data.mensaje || "Placa registrada.",
+              estado: "Placa registrada",
+              placa_imagen: data.placa_imagen || null,
+              placa_detectada: normalizedPlate,
+              detalles: data.vehiculo, // Usar el campo vehiculo directamente
+            });
+            toastr.success("Placa registrada.");
+          } else {
+            setResultado({
+              mensaje:
+                data.mensaje ||
+                "Placa no registrada. Por favor, registre el vehículo.",
+              estado: "Placa no registrada",
               placa_imagen: data.placa_imagen || null,
               placa_detectada: normalizedPlate,
               detalles: null,
             });
-            toastr.error("No se pudieron obtener los detalles del vehículo.");
+            toastr.warning(
+              "Placa no registrada. Por favor, registre el vehículo."
+            );
           }
 
           // Bloquear la placa por 3 minutos
@@ -180,7 +166,6 @@ const CameraDetection = () => {
     return () => {
       clearInterval(intervalId);
       if (videoRef.current && videoRef.current.srcObject) {
-        // eslint-disable-next-line react-hooks/exhaustive-deps
         const stream = videoRef.current.srcObject;
         stream.getTracks().forEach((track) => track.stop());
       }
