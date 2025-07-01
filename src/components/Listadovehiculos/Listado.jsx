@@ -19,6 +19,8 @@ function Listado() {
   const navigate = useNavigate();
   const [filteredRecords, setFilteredRecords] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [startDate, setStartDate] = useState(""); // Nueva fecha de inicio
+  const [endDate, setEndDate] = useState(""); // Nueva fecha de fin
 
   useEffect(() => {
     const userId = localStorage.getItem("id");
@@ -66,15 +68,40 @@ function Listado() {
   const handleSearch = (e) => {
     const query = e.target.value.toLowerCase();
     setSearchQuery(query);
+    applyFilters(query, startDate, endDate);
+  };
+
+  const handleDateFilter = () => {
+    applyFilters(searchQuery, startDate, endDate);
+  };
+
+  const applyFilters = (query, start, end) => {
+    let filtered = [...records];
 
     if (query) {
-      const filtered = records.filter((record) =>
+      filtered = filtered.filter((record) =>
         record.numero_placa.toLowerCase().includes(query)
       );
-      setFilteredRecords(filtered);
-    } else {
-      setFilteredRecords(records);
     }
+
+    if (start && end) {
+      filtered = filtered.filter((record) => {
+        const recordDate = new Date(record.fecha_entrada);
+        return recordDate >= new Date(start) && recordDate <= new Date(end);
+      });
+    } else if (start) {
+      filtered = filtered.filter((record) => {
+        const recordDate = new Date(record.fecha_entrada);
+        return recordDate >= new Date(start);
+      });
+    } else if (end) {
+      filtered = filtered.filter((record) => {
+        const recordDate = new Date(record.fecha_entrada);
+        return recordDate <= new Date(end);
+      });
+    }
+
+    setFilteredRecords(filtered);
   };
 
   const exportToExcel = () => {
@@ -252,7 +279,7 @@ function Listado() {
           </div>
         </div>
 
-        <div className="relative flex items-center mb-6">
+        <div className="relative flex flex-col sm:flex-row items-center mb-6 gap-4">
           <div className="w-10 h-10 bg-[#167f9f] text-white rounded-full flex items-center justify-center shadow-md">
             <i className="fas fa-search text-lg"></i>
           </div>
@@ -263,6 +290,27 @@ function Listado() {
             onChange={handleSearch}
             className="ml-3 w-full sm:w-64 pl-4 pr-4 py-2 text-sm md:text-base text-gray-700 placeholder-gray-400 bg-white border border-[#167f9f] rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-[#167f9f]"
           />
+
+          <div className="flex gap-2 mt-2 sm:mt-0">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full sm:w-40 pl-2 pr-2 py-1 text-sm md:text-base text-gray-700 bg-white border border-[#167f9f] rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-[#167f9f]"
+            />
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full sm:w-40 pl-2 pr-2 py-1 text-sm md:text-base text-gray-700 bg-white border border-[#167f9f] rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-[#167f9f]"
+            />
+            <button
+              onClick={handleDateFilter}
+              className="px-4 py-2 bg-[#167f9f] text-white rounded-md shadow-md hover:bg-[#13667e] focus:outline-none transition duration-200"
+            >
+              Filtrar
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row justify-end gap-4 mb-6">
