@@ -12,7 +12,7 @@ import {
 const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     numero_placa: "",
-    tipo_vehiculo: "",
+    tipo_vehiculo: "", // Valor inicial vacío, pero ajustaremos el select
     propietario: "",
     dni: "",
   });
@@ -44,7 +44,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
   const resetForm = () => {
     setFormData({
       numero_placa: "",
-      tipo_vehiculo: "",
+      tipo_vehiculo: "", // Reinicia a vacío
       propietario: "",
       dni: "",
     });
@@ -259,6 +259,11 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     }
   };
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
   const handleClose = () => {
     stopListening();
     resetForm();
@@ -321,7 +326,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
             />
             <select
               name="tipo_vehiculo"
-              value={formData.tipo_vehiculo}
+              value={formData.tipo_vehiculo} // Asegura que el valor sea uno de los códigos
               onChange={handleChange}
               className="w-full pl-12 pr-4 py-2.5 text-base border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:outline-none appearance-none"
               required
