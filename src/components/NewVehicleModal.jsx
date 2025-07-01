@@ -18,6 +18,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
   });
   const [isListening, setIsListening] = useState(false);
   const [transcriptMessage, setTranscriptMessage] = useState(""); // Mensaje para feedback
+  const [showSuccessModal, setShowSuccessModal] = useState(false); // Estado para el modal de éxito
   const recognitionRef = useRef(null);
   const formRef = useRef(null);
   const restartTimeoutRef = useRef(null);
@@ -119,10 +120,9 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       }
 
       if (tipoMatch && tipoMatch[1]) {
-        const tipoCode = tipoMatch[1].toUpperCase();
-        const tipoName = vehicleTypes[tipoCode] || tipoCode;
-        setFormData((prev) => ({ ...prev, tipo_vehiculo: tipoName }));
-        setTranscriptMessage(`Tipo de vehículo establecido: ${tipoName}`);
+        const tipo = tipoMatch[1].toUpperCase();
+        setFormData((prev) => ({ ...prev, tipo_vehiculo: tipo }));
+        setTranscriptMessage(`Tipo de vehículo establecido: ${tipo}`);
       }
 
       if (propietarioMatch && propietarioMatch[1]) {
@@ -228,12 +228,15 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       return;
     }
 
+    // Convertir el código del tipo de vehículo a su nombre completo antes de enviar
+    const tipoVehiculoName = vehicleTypes[formData.tipo_vehiculo] || formData.tipo_vehiculo;
+
     try {
       const response = await axios.post(
         "https://rumipark-CamiMujica.pythonanywhere.com/vehiculos",
         {
           numero_placa: formData.numero_placa,
-          tipo_vehiculo: formData.tipo_vehiculo,
+          tipo_vehiculo: tipoVehiculoName,
           propietario: formData.propietario,
           dni: formData.dni,
         },
@@ -246,10 +249,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       );
 
       if (response.status === 201) {
-        setTranscriptMessage("Vehículo registrado exitosamente.");
-        onSuccess();
-        resetForm();
-        onClose();
+        setShowSuccessModal(true); // Mostrar el modal de éxito
       }
     } catch (error) {
       const errorMessage =
@@ -259,15 +259,16 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    const updatedValue = name === "tipo_vehiculo" ? vehicleTypes[value] || value : value;
-    setFormData({ ...formData, [name]: updatedValue });
-  };
-
   const handleClose = () => {
     stopListening();
     resetForm();
+    onClose();
+  };
+
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    resetForm();
+    onSuccess();
     onClose();
   };
 
@@ -392,6 +393,23 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
           </div>
         </form>
       </div>
+
+      {/* Modal de éxito */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-[#6a97c1] text-white rounded-lg shadow-lg w-full max-w-md p-6 sm:p-8 border-4 border-[#3a6e9f] mx-4 text-center">
+            <h2 className="text-xl sm:text-2xl font-semibold mb-4">
+              Vehículo registrado correctamente
+            </h2>
+            <button
+              onClick={handleSuccessModalClose}
+              className="px-4 py-2 bg-[#3a6e9f] text-white rounded-lg hover:bg-[#2e5a7d] transition-all text-sm sm:text-base"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
