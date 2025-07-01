@@ -16,6 +16,8 @@ function Usuarios() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportType, setExportType] = useState("");
   const navigate = useNavigate();
+  const [startDate, setStartDate] = useState(""); // Nueva fecha de inicio
+  const [endDate, setEndDate] = useState(""); // Nueva fecha de fin
 
   useEffect(() => {
     const userId = localStorage.getItem("id");
@@ -59,17 +61,42 @@ function Usuarios() {
   const handleSearch = (e) => {
     const query = e.target.value.toLowerCase();
     setSearchQuery(query);
+    applyFilters(query, startDate, endDate);
+  };
+
+  const handleDateFilter = () => {
+    applyFilters(searchQuery, startDate, endDate);
+  };
+
+  const applyFilters = (query, start, end) => {
+    let filtered = [...usuarios];
 
     if (query) {
-      const filtered = usuarios.filter(
+      filtered = filtered.filter(
         (usuario) =>
           usuario.propietario.toLowerCase().includes(query) ||
           usuario.numero_placa.toLowerCase().includes(query)
       );
-      setFilteredUsuarios(filtered);
-    } else {
-      setFilteredUsuarios(usuarios);
     }
+
+    if (start && end) {
+      filtered = filtered.filter((usuario) => {
+        const usuarioDate = new Date(usuario.created_at || usuario.updated_at); // Asume que hay una fecha como created_at o updated_at
+        return usuarioDate >= new Date(start) && usuarioDate <= new Date(end);
+      });
+    } else if (start) {
+      filtered = filtered.filter((usuario) => {
+        const usuarioDate = new Date(usuario.created_at || usuario.updated_at);
+        return usuarioDate >= new Date(start);
+      });
+    } else if (end) {
+      filtered = filtered.filter((usuario) => {
+        const usuarioDate = new Date(usuario.created_at || usuario.updated_at);
+        return usuarioDate <= new Date(end);
+      });
+    }
+
+    setFilteredUsuarios(filtered);
   };
 
   const simulateProgress = (callback) => {
@@ -91,8 +118,12 @@ function Usuarios() {
 
   const exportToExcel = () => {
     setExportType("Excel");
+    if (filteredUsuarios.length === 0) {
+      alert("No hay usuarios para exportar.");
+      return;
+    }
     simulateProgress(() => {
-      const worksheet = utils.json_to_sheet(usuarios);
+      const worksheet = utils.json_to_sheet(filteredUsuarios);
       const workbook = utils.book_new();
       utils.book_append_sheet(workbook, worksheet, "Usuarios");
       writeFile(workbook, `usuarios_${new Date().toLocaleDateString()}.xlsx`);
@@ -101,6 +132,10 @@ function Usuarios() {
 
   const exportToPDF = () => {
     setExportType("PDF");
+    if (filteredUsuarios.length === 0) {
+      alert("No hay usuarios para exportar.");
+      return;
+    }
     simulateProgress(() => {
       const doc = new jsPDF();
       const tableColumn = [
@@ -110,7 +145,7 @@ function Usuarios() {
         "Propietario",
         "DNI",
       ];
-      const tableRows = usuarios.map((usuario) => [
+      const tableRows = filteredUsuarios.map((usuario) => [
         usuario.id,
         usuario.numero_placa,
         usuario.tipo_vehiculo,
@@ -211,7 +246,7 @@ function Usuarios() {
           </div>
         </div>
 
-        <div className="relative flex items-center mb-6">
+        <div className="relative flex flex-col sm:flex-row items-center mb-6 gap-4">
           <div className="w-10 h-10 bg-[#167f9f] text-white rounded-full flex items-center justify-center shadow-md">
             <i className="fas fa-search text-lg"></i>
           </div>
@@ -222,6 +257,27 @@ function Usuarios() {
             onChange={handleSearch}
             className="ml-3 w-full sm:w-64 pl-4 pr-4 py-2 text-sm md:text-base text-gray-700 placeholder-gray-400 bg-white border border-[#167f9f] rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-[#167f9f]"
           />
+
+          <div className="flex gap-2 mt-2 sm:mt-0">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full sm:w-40 pl-2 pr-2 py-1 text-sm md:text-base text-gray-700 bg-white border border-[#167f9f] rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-[#167f9f]"
+            />
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full sm:w-40 pl-2 pr-2 py-1 text-sm md:text-base text-gray-700 bg-white border border-[#167f9f] rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-[#167f9f]"
+            />
+            <button
+              onClick={handleDateFilter}
+              className="px-4 py-2 bg-[#167f9f] text-white rounded-md shadow-md hover:bg-[#13667e] focus:outline-none transition duration-200"
+            >
+              Filtrar
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row justify-end gap-6 mb-6">
