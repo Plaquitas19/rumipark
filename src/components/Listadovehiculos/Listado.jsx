@@ -127,8 +127,7 @@ function Listado() {
   const exportToExcel = () => {
     setExportType("Excel");
     if (filteredRecords.length === 0) {
-      toast.warning("No hay registros para exportar.");
-      return;
+      return; // No muestra notificación, simplemente no hace nada
     }
     simulateProgress(() => {
       const worksheet = utils.json_to_sheet(filteredRecords);
@@ -142,8 +141,7 @@ function Listado() {
   const exportToPDF = () => {
     setExportType("PDF");
     if (filteredRecords.length === 0) {
-      toast.warning("No hay registros para exportar.");
-      return;
+      return; // No muestra notificación, simplemente no hace nada
     }
     simulateProgress(() => {
       const doc = new jsPDF();
