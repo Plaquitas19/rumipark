@@ -133,8 +133,7 @@ function Listado() {
       const worksheet = utils.json_to_sheet(filteredRecords);
       const workbook = utils.book_new();
       utils.book_append_sheet(workbook, worksheet, "Registros");
-      writeFile(workbook, `registros_${new Date().toLocaleDateString()}.xlsx`);
-      toast.success("Exportado a Excel con éxito");
+      writeFile(workbook, `registros_${new Date().toLocaleDateString()}.xlsx`);      
     });
   };
 
