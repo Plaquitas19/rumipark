@@ -22,6 +22,19 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
   const formRef = useRef(null);
   const restartTimeoutRef = useRef(null);
 
+  // Mapa de códigos a nombres completos de vehículos
+  const vehicleTypes = {
+    L1: "Bicimotos y motocicletas",
+    L2: "Triciclos pequeños",
+    L3: "Motocicletas mayores",
+    L4: "Moto con sidecar",
+    L5: "Motociclos para transporte de pasajeros",
+    L6: "Cuatriciclos ligeros",
+    L7: "Cuatriciclos motorizados pesados",
+    M1: "Autos, taxis y SUV",
+    N1: "Camionetas pick-up y chasis cabina",
+  };
+
   // Detectar dispositivo móvil y navegador
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -106,9 +119,10 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       }
 
       if (tipoMatch && tipoMatch[1]) {
-        const tipo = tipoMatch[1].toUpperCase();
-        setFormData((prev) => ({ ...prev, tipo_vehiculo: tipo }));
-        setTranscriptMessage(`Tipo de vehículo establecido: ${tipo}`);
+        const tipoCode = tipoMatch[1].toUpperCase();
+        const tipoName = vehicleTypes[tipoCode] || tipoCode;
+        setFormData((prev) => ({ ...prev, tipo_vehiculo: tipoName }));
+        setTranscriptMessage(`Tipo de vehículo establecido: ${tipoName}`);
       }
 
       if (propietarioMatch && propietarioMatch[1]) {
@@ -247,7 +261,8 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    const updatedValue = name === "tipo_vehiculo" ? vehicleTypes[value] || value : value;
+    setFormData({ ...formData, [name]: updatedValue });
   };
 
   const handleClose = () => {
