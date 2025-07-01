@@ -21,6 +21,9 @@ function Listado() {
   const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState(""); // Nueva fecha de inicio
   const [endDate, setEndDate] = useState(""); // Nueva fecha de fin
+  const [progress, setProgress] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportType, setExportType] = useState("");
 
   useEffect(() => {
     const userId = localStorage.getItem("id");
@@ -104,69 +107,100 @@ function Listado() {
     setFilteredRecords(filtered);
   };
 
+  const simulateProgress = (callback) => {
+    let progressValue = 0;
+    setIsExporting(true);
+    const interval = setInterval(() => {
+      progressValue += 5;
+      setProgress(progressValue);
+      if (progressValue >= 100) {
+        clearInterval(interval);
+        setTimeout(() => {
+          callback();
+          setIsExporting(false);
+          setProgress(0);
+        }, 500);
+      }
+    }, 100);
+  };
+
   const exportToExcel = () => {
-    const worksheet = utils.json_to_sheet(filteredRecords);
-    const workbook = utils.book_new();
-    utils.book_append_sheet(workbook, worksheet, "Registros");
-    writeFile(workbook, `registros_${new Date().toLocaleDateString()}.xlsx`);
-    toast.success("Exportado a Excel con éxito");
+    setExportType("Excel");
+    if (filteredRecords.length === 0) {
+      toast.warning("No hay registros para exportar.");
+      return;
+    }
+    simulateProgress(() => {
+      const worksheet = utils.json_to_sheet(filteredRecords);
+      const workbook = utils.book_new();
+      utils.book_append_sheet(workbook, worksheet, "Registros");
+      writeFile(workbook, `registros_${new Date().toLocaleDateString()}.xlsx`);
+      toast.success("Exportado a Excel con éxito");
+    });
   };
 
   const exportToPDF = () => {
-    const doc = new jsPDF();
-    doc.addImage(logo, "PNG", 10, 10, 30, 30);
-    doc.setFontSize(16);
-    doc.setTextColor("#167f9f");
-    doc.text("Listado de Entrada y Salida de Vehículos", 50, 25);
+    setExportType("PDF");
+    if (filteredRecords.length === 0) {
+      toast.warning("No hay registros para exportar.");
+      return;
+    }
+    simulateProgress(() => {
+      const doc = new jsPDF();
+      doc.addImage(logo, "PNG", 10, 10, 30, 30);
+      doc.setFontSize(16);
+      doc.setTextColor("#167f9f");
+      doc.text("Listado de Entrada y Salida de Vehículos", 50, 25);
 
-    const tableColumn = [
-      "Placa",
-      "Estado",
-      "Fecha Entrada",
-      "Hora Entrada",
-      "Fecha Salida",
-      "Hora Salida",
-      "Observación",
-    ];
-    const tableRows = filteredRecords.map((record) => [
-      record.numero_placa,
-      record.estado,
-      record.fecha_entrada || "N/A",
-      record.hora_entrada || "N/A",
-      record.fecha_salida || "No registrada",
-      record.hora_salida || "No registrada",
-      record.observacion || "Sin observación",
-    ]);
+      const tableColumn = [
+        "Placa",
+        "Estado",
+        "Fecha Entrada",
+        "Hora Entrada",
+        "Fecha Salida",
+        "Hora Salida",
+        "Observación",
+      ];
+      const tableRows = filteredRecords.map((record) => [
+        record.numero_placa,
+        record.estado,
+        record.fecha_entrada || "N/A",
+        record.hora_entrada || "N/A",
+        record.fecha_salida || "No registrada",
+        record.hora_salida || "No registrada",
+        record.observacion || "Sin observación",
+      ]);
 
-    doc.autoTable({
-      head: [tableColumn],
-      body: tableRows,
-      startY: 60,
-      styles: {
-        fillColor: "#f2f2f2",
-        textColor: "#333333",
-        lineColor: "#cccccc",
-        lineWidth: 0.1,
-      },
-      headStyles: {
-        fillColor: "#167f9f",
-        textColor: "#ffffff",
-        fontSize: 12,
-        halign: "center",
-      },
-      bodyStyles: {
-        textColor: "#000000",
-        fontSize: 10,
-      },
-      alternateRowStyles: {
-        fillColor: "#e9f7fd",
-      },
-      margin: { top: 60 },
-      theme: "grid",
+      doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 60,
+        styles: {
+          fillColor: "#f2f2f2",
+          textColor: "#333333",
+          lineColor: "#cccccc",
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: "#167f9f",
+          textColor: "#ffffff",
+          fontSize: 12,
+          halign: "center",
+        },
+        bodyStyles: {
+          textColor: "#000000",
+          fontSize: 10,
+        },
+        alternateRowStyles: {
+          fillColor: "#e9f7fd",
+        },
+        margin: { top: 60 },
+        theme: "grid",
+      });
+
+      doc.save(`listado_vehiculos_${new Date().toLocaleDateString()}.pdf`);
+      toast.success("Exportado a PDF con éxito");
     });
-
-    doc.save(`listado_vehiculos_${new Date().toLocaleDateString()}.pdf`);
-    toast.success("Exportado a PDF con éxito");
   };
 
   const handleSelectRecord = (record) => {
@@ -256,6 +290,61 @@ function Listado() {
     }
   };
 
+  const ProgressSphere = () => {
+    const arcColor =
+      exportType === "Excel"
+        ? "rgba(0, 128, 0, 0.7)"
+        : "rgba(220, 97, 93, 0.7)"; // Verde para Excel, rojo para PDF
+    const lightColor =
+      exportType === "Excel"
+        ? "rgba(144, 238, 144, 0.5)"
+        : "rgba(255, 204, 204, 0.5)"; // Luz superior según tipo
+
+    return (
+      <div className="relative flex items-center justify-center w-32 h-32 mx-auto">
+        {/* Fondo de la esfera con efecto de vidrio */}
+        <div
+          className="absolute w-full h-full bg-white rounded-full"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(255,255,255,0.6), rgba(255,255,255,0.2))",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid rgba(255, 255, 255, 0.5)",
+            boxShadow:
+              "inset 0 4px 6px rgba(255, 255, 255, 0.7), inset 0 -4px 6px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.1)",
+          }}
+        ></div>
+
+        {/* Representación de progreso como un arco */}
+        <div
+          className="absolute w-full h-full rounded-full overflow-hidden"
+          style={{
+            background: `conic-gradient(
+              ${arcColor} ${progress * 3.6}deg, 
+              rgba(255, 255, 255, 0.1) 0deg
+            )`,
+          }}
+        ></div>
+
+        {/* Punto de luz superior para un efecto 3D */}
+        <div
+          className="absolute top-2 left-2 w-12 h-12 bg-white rounded-full"
+          style={{
+            opacity: 0.3,
+            background: lightColor,
+            boxShadow: `0 0 10px 5px ${lightColor}`,
+          }}
+        ></div>
+
+        {/* Texto del progreso */}
+        <span className="absolute text-lg font-bold text-gray-700">
+          {progress}%
+        </span>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return <div className="text-center p-4">Cargando datos...</div>;
   }
@@ -327,6 +416,17 @@ function Listado() {
             <i className="fas fa-file-pdf mr-2"></i> Exportar a PDF
           </button>
         </div>
+
+        {isExporting && (
+          <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
+            <div className="bg-white p-6 rounded-lg shadow-xl">
+              <p className="text-xl font-semibold text-gray-700 mb-4">
+                Exportando a {exportType}...
+              </p>
+              <ProgressSphere />
+            </div>
+          </div>
+        )}
 
         <div className="space-y-6">
           {filteredRecords.length > 0 ? (
