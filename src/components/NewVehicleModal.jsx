@@ -326,24 +326,6 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
 
           <div className="relative">
             <FontAwesomeIcon
-              icon={faPen}
-              className="absolute left-4 top-3.5"
-              style={{ color: "#1da4cf" }}
-            />
-            <input
-              type="text"
-              name="propietario"
-              value={formData.propietario}
-              onChange={handleChange}
-              placeholder="Propietario"
-              className="w-full pl-12 pr-4 py-2.5 text-base border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:outline-none"
-              required
-              style={{ borderColor: "#1da4cf" }}
-            />
-          </div>
-
-          <div className="relative">
-            <FontAwesomeIcon
               icon={faIdCard}
               className="absolute left-4 top-3.5"
               style={{ color: "#1da4cf" }}
@@ -354,6 +336,24 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
               value={formData.dni}
               onChange={handleChange}
               placeholder="DNI del Propietario"
+              className="w-full pl-12 pr-4 py-2.5 text-base border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:outline-none"
+              required
+              style={{ borderColor: "#1da4cf" }}
+            />
+          </div>
+
+          <div className="relative">
+            <FontAwesomeIcon
+              icon={faPen}
+              className="absolute left-4 top-3.5"
+              style={{ color: "#1da4cf" }}
+            />
+            <input
+              type="text"
+              name="propietario"
+              value={formData.propietario}
+              onChange={handleChange}
+              placeholder="Propietario"
               className="w-full pl-12 pr-4 py-2.5 text-base border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:outline-none"
               required
               style={{ borderColor: "#1da4cf" }}
