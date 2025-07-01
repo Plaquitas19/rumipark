@@ -27,6 +27,7 @@ const CameraSection = () => {
   const [isLoadingImageUsage, setIsLoadingImageUsage] = useState(false);
   const [isDetecting, setIsDetecting] = useState(false);
   const [bbox, setBbox] = useState(null);
+  const [uploadedImage, setUploadedImage] = useState(null); // Estado para la imagen subida
 
   useEffect(() => {
     const fetchImageUsage = async () => {
@@ -368,7 +369,6 @@ const CameraSection = () => {
             await registerExit(normalizedPlate, userId);
           }
 
-          // Depuración detallada para la solicitud de detalles
           try {
             console.log(`Solicitando detalles para placa: ${normalizedPlate}, usuario: ${userId}`);
             const detailsResponse = await fetch(
@@ -539,7 +539,9 @@ const CameraSection = () => {
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
-      detectPlate(file);
+      const imageUrl = URL.createObjectURL(file); // Crear URL de la imagen subida
+      setUploadedImage(imageUrl); // Guardar la imagen subida
+      detectPlate(file); // Procesar la placa
     }
   };
 
@@ -574,11 +576,17 @@ const CameraSection = () => {
             ref={containerRef}
             className="relative w-full h-[65vh] bg-gray-600 rounded-lg flex items-center justify-center overflow-hidden"
           >
-            {!isCameraActive && (
+            {!isCameraActive && uploadedImage ? (
+              <img
+                src={uploadedImage}
+                alt="Imagen subida"
+                className="absolute w-auto h-full object-cover rounded-lg"
+              />
+            ) : !isCameraActive ? (
               <p className="text-white text-center">
                 Esperando cámara en vivo...
               </p>
-            )}
+            ) : null}
             <video
               ref={videoRef}
               className="absolute w-auto h-full object-cover rounded-lg"
