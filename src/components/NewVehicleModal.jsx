@@ -23,7 +23,6 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
   const restartTimeoutRef = useRef(null);
 
   // Detectar dispositivo móvil y navegador
-  // eslint-disable-next-line no-unused-vars
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
@@ -93,7 +92,7 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
         /(?:número de placa|placa)\s+([a-z0-9\s-]+)/i
       );
       const tipoMatch = transcript.match(
-        /(?:tipo de vehículo|tipo)\s+([a-z\s]+)/i
+        /(?:tipo de vehículo|tipo)\s+(l1|l2|l3|l4|l5|l6|l7|m1|n1)/i
       );
       const propietarioMatch = transcript.match(
         /(?:propietario|dueño)\s+([a-z\s]+)/i
@@ -107,12 +106,9 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
       }
 
       if (tipoMatch && tipoMatch[1]) {
-        const tipo = tipoMatch[1].trim();
-        const tipoCapitalized = tipo.charAt(0).toUpperCase() + tipo.slice(1);
-        setFormData((prev) => ({ ...prev, tipo_vehiculo: tipoCapitalized }));
-        setTranscriptMessage(
-          `Tipo de vehículo establecido: ${tipoCapitalized}`
-        );
+        const tipo = tipoMatch[1].toUpperCase();
+        setFormData((prev) => ({ ...prev, tipo_vehiculo: tipo }));
+        setTranscriptMessage(`Tipo de vehículo establecido: ${tipo}`);
       }
 
       if (propietarioMatch && propietarioMatch[1]) {
@@ -307,16 +303,25 @@ const NewVehicleModal = ({ isOpen, onClose, onSuccess }) => {
               className="absolute left-4 top-3.5"
               style={{ color: "#1da4cf" }}
             />
-            <input
-              type="text"
+            <select
               name="tipo_vehiculo"
               value={formData.tipo_vehiculo}
               onChange={handleChange}
-              placeholder="Tipo de Vehículo"
-              className="w-full pl-12 pr-4 py-2.5 text-base border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:outline-none"
+              className="w-full pl-12 pr-4 py-2.5 text-base border-2 rounded-md shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:outline-none appearance-none"
               required
               style={{ borderColor: "#1da4cf" }}
-            />
+            >
+              <option value="">Seleccione Tipo de Vehículo</option>
+              <option value="L1">Bicimotos y motocicletas</option>
+              <option value="L2">Triciclos pequeños</option>
+              <option value="L3">Motocicletas mayores</option>
+              <option value="L4">Moto con sidecar</option>
+              <option value="L5">Motociclos para transporte de pasajeros</option>
+              <option value="L6">Cuatriciclos ligeros</option>
+              <option value="L7">Cuatriciclos motorizados pesados</option>
+              <option value="M1">Autos, taxis y SUV</option>
+              <option value="N1">Camionetas pick-up y chasis cabina</option>
+            </select>
           </div>
 
           <div className="relative">
